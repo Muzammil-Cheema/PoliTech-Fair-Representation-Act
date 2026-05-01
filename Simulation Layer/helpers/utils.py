@@ -113,9 +113,6 @@ def distribute_surplus_transfer_values(
     elected_candidate_id: str,
     surplus_fraction: float,
 ) -> None:
-    if surplus_fraction <= 0:
-        return
-
     active_set_for_this = {elected_candidate_id}
     for ballot in election.ballots:
         current_candidate_id = highest_ranked_active(ballot, active_set_for_this)
