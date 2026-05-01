@@ -20,6 +20,25 @@ This file must be updated after **every LLM-authored code change** so the docume
 6. Preserve deterministic metadata when exporting to simulation (`election_id`, `seat_count`, `mode`, `tie_break_order`, optional rank cap fields).
 7. Reuse existing models and helpers. Do not duplicate models in new files.
 
+## Commit Message Convention
+
+- Use `feat: <message>` for feature work.
+- Use `fix: <message>` for bug fixes.
+- Use `refactor: <message>` for refactoring-only changes.
+
+## Environment Variables
+
+### Required by source code
+
+- None currently required by runtime source files.
+
+### Common workflow variables
+
+- `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`
+  - Recommended for stable local test execution.
+- `PYTHONPATH=.:src`
+  - Useful when running scripts directly from `Representational Layer/`.
+
 ## Layer Boundary Contract
 
 - Representational layer outputs:
@@ -61,6 +80,12 @@ This file must be updated after **every LLM-authored code change** so the docume
   - `warn(message)`
   - `success(message)`
   - `error(message)` (terminates process)
+  - Global constants:
+    - `RESET`
+    - `BLUE`
+    - `GREEN`
+    - `RED`
+    - `YELLOW`
 - `global_utilities/json_io.py`
   - Types:
     - `SimulationJsonMetadata`
@@ -137,7 +162,12 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `Ballot`, `Candidate`, `Election`, `Mode`, `Ranking`
     - `load_election_from_json`, `run_election`, `run_multi_seat_stv`, `run_single_seat_rcv`, `run_cli`
 - `Simulation Layer/core/config.py`
-  - Mode constants, defaults, encoding.
+  - Global constants:
+    - `MODE_SINGLE_SEAT_RCV`
+    - `MODE_MULTI_SEAT_STV`
+    - `VALID_MODES`
+    - `DEFAULT_TRANSFER_VALUE`
+    - `DEFAULT_ENCODING`
 - `Simulation Layer/core/models.py`
   - Dataclasses:
     - `Candidate`, `Ranking`, `Ballot`, `Election`
@@ -162,6 +192,8 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `apply_threshold_to_elected(totals, status, threshold)`
     - `distribute_surplus_transfer_values(election, elected_candidate_id, surplus_fraction)`
 - `Simulation Layer/runner/main.py`
+  - Global constants:
+    - `PROJECT_ROOT`
   - `run_single_seat_rcv(election) -> Dict`
   - `run_multi_seat_stv(election) -> Dict`
   - `run_election(election) -> Dict`
@@ -172,6 +204,53 @@ This file must be updated after **every LLM-authored code change** so the docume
 - `pipe/input.json`: manual/CLI handoff entry path.
 - `pipe/acceptance_test_cases/*.json`: canonical simulation acceptance inputs.
 - `pipe/test_*_output.json`: representational test exports in simulation-ready form.
+
+## Global Constants Inventory
+
+- `global_utilities/json_io.py`
+  - `PROJECT_ROOT`, `SIMULATION_ROOT`, `PIPE_DIR_NAME`
+- `global_utilities/logger.py`
+  - `RESET`, `BLUE`, `GREEN`, `RED`, `YELLOW`
+- `Simulation Layer/core/config.py`
+  - `MODE_SINGLE_SEAT_RCV`, `MODE_MULTI_SEAT_STV`, `VALID_MODES`, `DEFAULT_TRANSFER_VALUE`, `DEFAULT_ENCODING`
+- `Simulation Layer/fra_engine.py`
+  - `SIMULATION_ROOT`, `PROJECT_ROOT`
+- `Simulation Layer/runner/main.py`
+  - `PROJECT_ROOT`
+- `Representational Layer/src/output_writer.py`
+  - `PROJECT_ROOT`
+- Test-only globals:
+  - `Representational Layer/tests/test_json_io.py`: `PROJECT_ROOT`
+  - `Simulation Layer/tests/test_acceptance_e2e.py`: `PROJECT_ROOT`, `SIMULATION_ROOT`, `CASE_DIR`
+
+## Complete Model/Class Inventory
+
+### Representational layer classes
+
+- `Experiment`
+- `District`
+- `Election`
+- `AttributeSpec`
+- `Candidate`
+- `ElectorUnit`
+- `PreferenceModel`
+- `BallotGenerationRun`
+- `RankGroup`
+- `Ballot`
+
+### Simulation layer classes
+
+- `Candidate`
+- `Ranking`
+- `Ballot`
+- `Election`
+
+### Shared JSON-contract classes/types
+
+- `SimulationJsonMetadata` (`TypedDict`)
+- `RepresentationCandidate` (`Protocol`)
+- `RepresentationRankGroup` (`Protocol`)
+- `RepresentationBallot` (`Protocol`)
 
 ## Required Agent Workflow For JSON Handoffs
 

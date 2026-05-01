@@ -42,6 +42,24 @@ Before adding a new utility, search for it first with `rg`.
 3. Run tests: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q`
 4. Generate/refresh simulation-ready JSON through `write_simulation_ready_output(...)` or `write_simulation_ready_json(...)`.
 
+## Environment Variables And Globals
+
+### Environment variables
+
+- Required by source code: none currently required.
+- Common workflow variables:
+  - `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` for stable test runs.
+  - `PYTHONPATH=.:src` for direct script execution from `Representational Layer/`.
+
+### Global constants
+
+- `global_utilities/json_io.py`: `PROJECT_ROOT`, `SIMULATION_ROOT`, `PIPE_DIR_NAME`
+- `global_utilities/logger.py`: `RESET`, `BLUE`, `GREEN`, `RED`, `YELLOW`
+- `Simulation Layer/core/config.py`: `MODE_SINGLE_SEAT_RCV`, `MODE_MULTI_SEAT_STV`, `VALID_MODES`, `DEFAULT_TRANSFER_VALUE`, `DEFAULT_ENCODING`
+- `Simulation Layer/fra_engine.py`: `SIMULATION_ROOT`, `PROJECT_ROOT`
+- `Simulation Layer/runner/main.py`: `PROJECT_ROOT`
+- `Representational Layer/src/output_writer.py`: `PROJECT_ROOT`
+
 ## Practical Tips
 
 - Keep ballots in rank-group format (`rank` + `candidate_ids`), not flat lists.
@@ -72,3 +90,34 @@ When you add visualization, consume outputs from:
 - simulation-ready JSON outputs in `pipe/` (ballot and candidate payloads)
 
 This keeps charts decoupled from core scoring/counting logic.
+
+## Known Issues And Remaining Work
+
+### High-priority known issues
+
+- The simulation layer has a strong acceptance-test base, but still needs hardening for long-run robustness and legal-confidence edge behavior under varied real-world input distributions.
+- Representational ballot generation currently exists in two styles:
+  - weighted random generation (`generate_ballot(...)` / `generate_weighted_ballot_ranking(...)`)
+  - profile-scoring + deterministic sort (used in profile-based tests)
+  - these should converge behind one simple public generation API.
+- `global_utilities/logger.py` currently uses `print` internally for output formatting. This is acceptable for now, but if structured observability is needed later, this should move to Python `logging` handlers.
+
+### What is left to do
+
+1. Simulation-layer correctness and robustness (top priority):
+   - expand beyond fixture-style acceptance tests into stress/property testing
+   - add adversarial/fuzz ballot-shape tests (deep skips, large same-rank groups, repeated ranks at scale)
+   - verify deterministic tie behavior persists cleanly across replay/recount workflows
+   - improve invariant checks and failure diagnostics around transfer-value and threshold transitions
+2. Representational-layer API simplification:
+   - expose one orchestration entrypoint for: scoring -> ranking -> ballot objects -> simulation JSON export
+   - keep per-method behavior selectable (`deterministic_sort`, weighted, softmax) behind that single entrypoint
+3. Vocabulary maturity:
+   - continue expanding and versioning shared attribute specs in `attributes/`
+   - formalize weight presets and missing-value policies for reproducible experiments
+4. Visualization support:
+   - add reusable export shape for plotting round-by-round candidate utilities and ballot distributions
+   - produce starter notebooks or scripts for score and ranking diagnostics
+5. Documentation alignment:
+   - keep `AGENTS.md` synchronized with each code change
+   - keep simulation handoff examples in `pipe/` aligned with current writer/readers
