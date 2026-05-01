@@ -1,0 +1,37 @@
+{
+  "election_id": "district_7_general",
+  "seat_count": 3,
+  "mode": "multi_seat_stv",
+  "tie_break_order": ["C4", "C2", "C1", "C5", "C3"],
+  "candidates": [
+    { "candidate_id": "C1", "withdrawn": false },
+    { "candidate_id": "C2", "withdrawn": false },
+    { "candidate_id": "C3", "withdrawn": false },
+    { "candidate_id": "C4", "withdrawn": false },
+    { "candidate_id": "C5", "withdrawn": false }
+  ],
+  "ballots": [
+    {
+      "ballot_id": "B1",
+      "rankings": [
+        { "rank": 1, "candidate_ids": ["C1"] },
+        { "rank": 2, "candidate_ids": ["C3"] },
+        { "rank": 3, "candidate_ids": ["C2"] }
+      ]
+    },
+    {
+      "ballot_id": "B2",
+      "rankings": [
+        { "rank": 1, "candidate_ids": ["C2"] },
+        { "rank": 3, "candidate_ids": ["C5"] }
+      ]
+    },
+    {
+      "ballot_id": "B3",
+      "rankings": [
+        { "rank": 1, "candidate_ids": ["C4", "C5"] },
+        { "rank": 2, "candidate_ids": ["C1"] }
+      ]
+    }
+  ]
+}

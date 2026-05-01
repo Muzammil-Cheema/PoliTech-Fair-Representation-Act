@@ -1,0 +1,100 @@
+[
+  {
+    "file": "01_single_seat_ordinary_elimination.json",
+    "description": "Single-seat election with ordinary elimination.",
+    "election_id": "single-seat-ordinary-elimination",
+    "mode": "single_seat_rcv",
+    "seat_count": 1
+  },
+  {
+    "file": "02_single_seat_with_withdrawn_candidate.json",
+    "description": "Single-seat election with one withdrawn candidate treated as inactive from the start.",
+    "election_id": "single-seat-with-withdrawn-candidate",
+    "mode": "single_seat_rcv",
+    "seat_count": 1
+  },
+  {
+    "file": "03_single_seat_two_active_candidates.json",
+    "description": "Single-seat election that starts with only two active candidates.",
+    "election_id": "single-seat-two-active-candidates",
+    "mode": "single_seat_rcv",
+    "seat_count": 1
+  },
+  {
+    "file": "04_multi_seat_one_candidate_exceeds_threshold.json",
+    "description": "Multi-seat STV election where exactly one candidate exceeds the threshold in the first round.",
+    "election_id": "multi-seat-one-candidate-exceeds-threshold",
+    "mode": "multi_seat_stv",
+    "seat_count": 2
+  },
+  {
+    "file": "05_multi_seat_multiple_candidates_exceed_threshold.json",
+    "description": "Multi-seat STV election where multiple candidates exceed the threshold in the same round.",
+    "election_id": "multi-seat-multiple-candidates-exceed-threshold",
+    "mode": "multi_seat_stv",
+    "seat_count": 2
+  },
+  {
+    "file": "06_multi_seat_lowest_candidate_eliminated.json",
+    "description": "Multi-seat STV election where no one reaches threshold in round one and the lowest candidate is eliminated.",
+    "election_id": "multi-seat-lowest-candidate-eliminated",
+    "mode": "multi_seat_stv",
+    "seat_count": 2
+  },
+  {
+    "file": "07_undervote_ballot_ignored.json",
+    "description": "Undervote ballot with no rankings should be ignored.",
+    "election_id": "undervote-ballot-ignored",
+    "mode": "single_seat_rcv",
+    "seat_count": 1
+  },
+  {
+    "file": "08_ballot_becomes_inactive_all_ranked_candidates_inactive.json",
+    "description": "Ballot becomes inactive after every ranked candidate on it is inactive.",
+    "election_id": "ballot-becomes-inactive-all-ranked-candidates-inactive",
+    "mode": "single_seat_rcv",
+    "seat_count": 1
+  },
+  {
+    "file": "09_skipped_ranking_remains_valid.json",
+    "description": "Skipped ranking remains valid and later usable rankings can still transfer.",
+    "election_id": "skipped-ranking-remains-valid",
+    "mode": "single_seat_rcv",
+    "seat_count": 1
+  },
+  {
+    "file": "10_repeated_candidate_remains_valid.json",
+    "description": "Repeated candidate ranking remains valid and earliest usable active ranking controls.",
+    "election_id": "repeated-candidate-remains-valid",
+    "mode": "single_seat_rcv",
+    "seat_count": 1
+  },
+  {
+    "file": "11_same_rank_assignment_causes_inactivity.json",
+    "description": "Ballot becomes inactive when the first reachable active rank contains multiple active candidates.",
+    "election_id": "same-rank-assignment-causes-inactivity",
+    "mode": "single_seat_rcv",
+    "seat_count": 1
+  },
+  {
+    "file": "12_tie_break_rule_deterministic.json",
+    "description": "Tie-break order should make a fully tied single-seat election deterministic.",
+    "election_id": "tie-break-rule-deterministic",
+    "mode": "single_seat_rcv",
+    "seat_count": 1
+  },
+  {
+    "file": "13_completion_when_remaining_candidates_match_seats.json",
+    "description": "Multi-seat STV completion occurs when elected plus active candidates is less than or equal to seat count.",
+    "election_id": "completion-when-remaining-candidates-match-seats",
+    "mode": "multi_seat_stv",
+    "seat_count": 3
+  },
+  {
+    "file": "14_candidate_reaches_threshold_exactly.json",
+    "description": "Candidate reaches the STV threshold exactly, so surplus fraction should be zero.",
+    "election_id": "candidate-reaches-threshold-exactly",
+    "mode": "multi_seat_stv",
+    "seat_count": 2
+  }
+]

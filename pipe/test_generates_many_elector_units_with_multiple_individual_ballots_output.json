@@ -1,0 +1,2331 @@
+{
+  "test_name": "test_generates_many_elector_units_with_multiple_individual_ballots",
+  "metadata": {
+    "election_id": "election-004",
+    "seat_count": 3,
+    "mode": "multi_seat_stv",
+    "tie_break_order": [
+      "cand-a",
+      "cand-b",
+      "cand-c",
+      "cand-d"
+    ],
+    "max_ranks_allowed": 4
+  },
+  "candidates": [
+    {
+      "candidate_id": "cand-a",
+      "election_id": "election-004",
+      "withdrawn": false,
+      "home_district_id": null,
+      "profile": {
+        "ideology_score": 0.15,
+        "party_id": "D",
+        "home_region": "north",
+        "community_tags": [
+          "labor",
+          "urban"
+        ],
+        "issue_tags": [
+          "education",
+          "housing"
+        ],
+        "candidate_quality": 82.0
+      }
+    },
+    {
+      "candidate_id": "cand-b",
+      "election_id": "election-004",
+      "withdrawn": false,
+      "home_district_id": null,
+      "profile": {
+        "ideology_score": -0.7,
+        "party_id": "R",
+        "home_region": "south",
+        "community_tags": [
+          "rural",
+          "veterans"
+        ],
+        "issue_tags": [
+          "public_safety",
+          "taxes"
+        ],
+        "candidate_quality": 78.0
+      }
+    },
+    {
+      "candidate_id": "cand-c",
+      "election_id": "election-004",
+      "withdrawn": false,
+      "home_district_id": null,
+      "profile": {
+        "ideology_score": 0.55,
+        "party_id": "D",
+        "home_region": "west",
+        "community_tags": [
+          "college_town",
+          "immigrant_community"
+        ],
+        "issue_tags": [
+          "climate",
+          "housing"
+        ],
+        "candidate_quality": 68.0
+      }
+    },
+    {
+      "candidate_id": "cand-d",
+      "election_id": "election-004",
+      "withdrawn": false,
+      "home_district_id": null,
+      "profile": {
+        "ideology_score": -0.1,
+        "party_id": "I",
+        "home_region": "east",
+        "community_tags": [
+          "small_business",
+          "suburban"
+        ],
+        "issue_tags": [
+          "education",
+          "healthcare"
+        ],
+        "candidate_quality": 74.0
+      }
+    }
+  ],
+  "ballots": [
+    {
+      "ballot_id": "ballot-block-00-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-00",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-00-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-00",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-00-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-00",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-01-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-01",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-01-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-01",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-01-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-01",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-02-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-02",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-02-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-02",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-02-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-02",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-03-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-03",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-03-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-03",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-03-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-03",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-04-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-04",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-04-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-04",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-04-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-04",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-05-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-05",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-05-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-05",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-05-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-05",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-06-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-06",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-06-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-06",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-06-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-06",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-07-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-07",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-07-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-07",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-07-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-07",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-08-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-08",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-08-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-08",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-08-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-08",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-09-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-09",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-09-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-09",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-09-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-09",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-10-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-10",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-10-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-10",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-10-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-10",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-11-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-11",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-11-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-11",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-11-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-11",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-12-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-12",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-12-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-12",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-12-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-12",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-13-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-13",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-13-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-13",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-13-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-13",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-14-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-14",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-14-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-14",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-14-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-14",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-15-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-15",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-15-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-15",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-15-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-15",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-16-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-16",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-16-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-16",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-16-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-16",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-17-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-17",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-17-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-17",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-17-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-17",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-18-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-18",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-18-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-18",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-18-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-18",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-19-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-19",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-19-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-19",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-19-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-19",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-20-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-20",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-20-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-20",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-20-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-20",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-21-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-21",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-21-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-21",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-21-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-21",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-22-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-22",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-22-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-22",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-22-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-22",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-23-00",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-23",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-23-01",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-23",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "ballot-block-23-02",
+      "generation_run_id": "run-004",
+      "source_elector_unit_id": "block-23",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-d"
+          ]
+        },
+        {
+          "rank": 4,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    }
+  ]
+}

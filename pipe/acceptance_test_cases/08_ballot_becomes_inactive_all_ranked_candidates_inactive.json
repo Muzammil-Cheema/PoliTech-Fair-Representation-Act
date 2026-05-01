@@ -1,0 +1,82 @@
+{
+  "election_id": "ballot-becomes-inactive-all-ranked-candidates-inactive",
+  "seat_count": 1,
+  "mode": "single_seat_rcv",
+  "tie_break_order": [
+    "A",
+    "B",
+    "C"
+  ],
+  "max_ranks_allowed": 2,
+  "candidates": [
+    {
+      "candidate_id": "A",
+      "withdrawn": false
+    },
+    {
+      "candidate_id": "B",
+      "withdrawn": false
+    },
+    {
+      "candidate_id": "C",
+      "withdrawn": false
+    }
+  ],
+  "ballots": [
+    {
+      "ballot_id": "B1",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "A"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "B2",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "A"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "B3",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "B"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "B4",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "C"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "B5",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "B"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+{
+  "test_name": "test_generates_deterministic_ballot_from_starter_six_attributes",
+  "metadata": {
+    "election_id": "election-003",
+    "seat_count": 3,
+    "mode": "multi_seat_stv",
+    "tie_break_order": [
+      "cand-a",
+      "cand-b",
+      "cand-c"
+    ],
+    "max_ranks_allowed": 3
+  },
+  "candidates": [
+    {
+      "candidate_id": "cand-a",
+      "election_id": "election-003",
+      "withdrawn": false,
+      "home_district_id": null,
+      "profile": {
+        "ideology_score": 0.1,
+        "party_id": "D",
+        "home_region": "north",
+        "community_tags": [
+          "labor"
+        ],
+        "issue_tags": [
+          "climate",
+          "housing"
+        ],
+        "candidate_quality": 80.0
+      }
+    },
+    {
+      "candidate_id": "cand-b",
+      "election_id": "election-003",
+      "withdrawn": false,
+      "home_district_id": null,
+      "profile": {
+        "ideology_score": -0.9,
+        "party_id": "R",
+        "home_region": "south",
+        "community_tags": [
+          "rural"
+        ],
+        "issue_tags": [
+          "public_safety"
+        ],
+        "candidate_quality": 90.0
+      }
+    },
+    {
+      "candidate_id": "cand-c",
+      "election_id": "election-003",
+      "withdrawn": false,
+      "home_district_id": null,
+      "profile": {
+        "ideology_score": 0.4,
+        "party_id": "D",
+        "home_region": "south",
+        "community_tags": [
+          "college_town",
+          "urban"
+        ],
+        "issue_tags": [
+          "education",
+          "housing"
+        ],
+        "candidate_quality": 60.0
+      }
+    }
+  ],
+  "ballots": [
+    {
+      "ballot_id": "ballot-003",
+      "generation_run_id": "run-003",
+      "source_elector_unit_id": "block-central",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "cand-a"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "cand-c"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "cand-b"
+          ]
+        }
+      ]
+    }
+  ]
+}

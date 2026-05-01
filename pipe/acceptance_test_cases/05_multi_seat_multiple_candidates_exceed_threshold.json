@@ -1,0 +1,163 @@
+{
+  "election_id": "multi-seat-multiple-candidates-exceed-threshold",
+  "seat_count": 2,
+  "mode": "multi_seat_stv",
+  "tie_break_order": [
+    "A",
+    "B",
+    "C"
+  ],
+  "max_ranks_allowed": 3,
+  "candidates": [
+    {
+      "candidate_id": "A",
+      "withdrawn": false
+    },
+    {
+      "candidate_id": "B",
+      "withdrawn": false
+    },
+    {
+      "candidate_id": "C",
+      "withdrawn": false
+    }
+  ],
+  "ballots": [
+    {
+      "ballot_id": "B1",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "A"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "C"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "B2",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "A"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "C"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "B3",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "A"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "C"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "B4",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "A"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "C"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "B5",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "B"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "C"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "B6",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "B"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "C"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "B7",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "B"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "C"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "B8",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "B"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "C"
+          ]
+        }
+      ]
+    }
+  ]
+}
