@@ -1,21 +1,10 @@
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 from typing import Dict, List
 
-# Allow direct execution via: python "Simulation_Layer/Runner/main.py"
-if __package__ is None or __package__ == "":
-    sys.path.append(str(Path(__file__).resolve().parent.parent))
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.append(str(PROJECT_ROOT))
-
-from Core.config import MODE_SINGLE_SEAT_RCV
-from Core.models import Election
-from Global_Utilities import error, info, read_simulation_ready_json, success
-from Helpers.utils import (
+from Simulation_Layer.Core.config import MODE_SINGLE_SEAT_RCV
+from Simulation_Layer.Core.models import Election
+from Simulation_Layer.Helpers.utils import (
     active_candidates,
     add_winner,
     apply_simultaneous_surplus_transfer_values,
@@ -29,6 +18,7 @@ from Helpers.utils import (
     initial_candidate_status,
     tie_break,
 )
+from Global_Utilities import error, info, read_simulation_ready_json, success
 
 
 def run_single_seat_rcv(election: Election) -> Dict:

@@ -3,18 +3,13 @@ from __future__ import annotations
 from dataclasses import asdict, is_dataclass
 import json
 from pathlib import Path
-import sys
 from typing import Any, Mapping, Protocol, Sequence, TypedDict
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-SIMULATION_ROOT = PROJECT_ROOT / "Simulation_Layer"
 PIPE_DIR_NAME = "Pipe"
 
-if str(SIMULATION_ROOT) not in sys.path:
-    sys.path.append(str(SIMULATION_ROOT))
-
-from Core.config import DEFAULT_ENCODING
-from Core.models import Ballot, Candidate, Mode, Ranking
+from Simulation_Layer.Core.config import DEFAULT_ENCODING
+from Simulation_Layer.Core.models import Ballot, Candidate, Mode, Ranking
 from .logger import error
 
 

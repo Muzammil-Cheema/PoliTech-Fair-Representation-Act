@@ -1,12 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-import sys
 from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.append(str(PROJECT_ROOT))
 
 from Global_Utilities import resolve_pipe_path, write_simulation_ready_json
 from Representational_Layer.models import Ballot, Candidate

@@ -1,26 +1,9 @@
 from __future__ import annotations
 
-"""
-Compatibility shim.
+"""Compatibility shim for the simulation engine public API."""
 
-The simulation engine implementation now lives under:
-  - Core/
-  - Helpers/
-  - Runner/main.py
-"""
-
-import sys
-from pathlib import Path
-
-SIMULATION_ROOT = Path(__file__).resolve().parent
-PROJECT_ROOT = SIMULATION_ROOT.parent
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.append(str(PROJECT_ROOT))
-if str(SIMULATION_ROOT) not in sys.path:
-    sys.path.append(str(SIMULATION_ROOT))
-
-from Core.models import Ballot, Candidate, Election, Mode, Ranking
-from Runner.main import (
+from Simulation_Layer.Core.models import Ballot, Candidate, Election, Mode, Ranking
+from Simulation_Layer.Runner.main import (
     load_election_from_json,
     run_cli,
     run_election,
