@@ -4,40 +4,40 @@
 
 This repository has two separate code layers that should stay separate:
 
-- `Representational Layer/`: generates candidates and ranked ballots.
-- `Simulation Layer/`: consumes election JSON and runs FRA counting rules.
+- `Representational_Layer/`: generates candidates and ranked ballots.
+- `Simulation_Layer/`: consumes election JSON and runs FRA counting rules.
 
 The fastest way to avoid regressions is to treat those as separate products with a shared JSON boundary.
 
 ## Best-Practice Structure
 
-- Keep representational experiments in `Representational Layer/src/representational_layer/`.
-- Keep simulation counting logic in `Simulation Layer/`.
-- Use `global_utilities/json_io.py` for JSON contracts between layers.
-- Use `global_utilities/logger.py` wrappers (`info/warn/success/error`) for runtime messaging.
-- Keep reusable attribute vocabulary in `attributes/starter_attributes.py`.
-- Put generated handoff JSON in `pipe/` through the JSON helpers.
+- Keep representational experiments in `Representational_Layer/Src/Representational_Layer/`.
+- Keep simulation counting logic in `Simulation_Layer/`.
+- Use `Global_Utilities/json_io.py` for JSON contracts between layers.
+- Use `Global_Utilities/logger.py` wrappers (`info/warn/success/error`) for runtime messaging.
+- Keep reusable attribute vocabulary in `Representational_Layer/Attributes/starter_attributes.py`.
+- Put generated handoff JSON in `Pipe/` through the JSON helpers.
 
 ## What Already Exists (Do Not Duplicate)
 
 - Data models:
-  - Representational models in `Representational Layer/src/representational_layer/models.py`
-  - Simulation models in `Simulation Layer/core/models.py`
+  - Representational models in `Representational_Layer/Src/Representational_Layer/models.py`
+  - Simulation models in `Simulation_Layer/Core/models.py`
 - Scoring logic:
-  - `Representational Layer/src/representational_layer/scoring.py`
+  - `Representational_Layer/Src/Representational_Layer/scoring.py`
 - Ballot generation helpers:
-  - `Representational Layer/src/representational_layer/generation.py`
+  - `Representational_Layer/Src/Representational_Layer/generation.py`
 - Simulation-ready JSON writers/readers:
-  - `global_utilities/json_io.py`
-  - `Representational Layer/src/output_writer.py` (thin wrapper for representational tests)
+  - `Global_Utilities/json_io.py`
+  - `Representational_Layer/Src/output_writer.py` (thin wrapper for representational tests)
 - Acceptance fixtures:
-  - `pipe/acceptance_test_cases/*.json`
+  - `Pipe/Acceptance_Test_Cases/*.json`
 
 Before adding a new utility, search for it first with `rg`.
 
 ## Daily Workflow
 
-1. `cd "Representational Layer"`
+1. `cd "Representational_Layer"`
 2. Activate env: `source ../.venv/bin/activate` (or local env equivalent)
 3. Run tests: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q`
 4. Generate/refresh simulation-ready JSON through `write_simulation_ready_output(...)` or `write_simulation_ready_json(...)`.
@@ -49,16 +49,16 @@ Before adding a new utility, search for it first with `rg`.
 - Required by source code: none currently required.
 - Common workflow variables:
   - `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` for stable test runs.
-  - `PYTHONPATH=.:src` for direct script execution from `Representational Layer/`.
+  - `PYTHONPATH=.:Src` for direct script execution from `Representational_Layer/`.
 
 ### Global constants
 
-- `global_utilities/json_io.py`: `PROJECT_ROOT`, `SIMULATION_ROOT`, `PIPE_DIR_NAME`
-- `global_utilities/logger.py`: `RESET`, `BLUE`, `GREEN`, `RED`, `YELLOW`
-- `Simulation Layer/core/config.py`: `MODE_SINGLE_SEAT_RCV`, `MODE_MULTI_SEAT_STV`, `VALID_MODES`, `DEFAULT_TRANSFER_VALUE`, `DEFAULT_ENCODING`
-- `Simulation Layer/fra_engine.py`: `SIMULATION_ROOT`, `PROJECT_ROOT`
-- `Simulation Layer/runner/main.py`: `PROJECT_ROOT`
-- `Representational Layer/src/output_writer.py`: `PROJECT_ROOT`
+- `Global_Utilities/json_io.py`: `PROJECT_ROOT`, `SIMULATION_ROOT`, `PIPE_DIR_NAME`
+- `Global_Utilities/logger.py`: `RESET`, `BLUE`, `GREEN`, `RED`, `YELLOW`
+- `Simulation_Layer/Core/config.py`: `MODE_SINGLE_SEAT_RCV`, `MODE_MULTI_SEAT_STV`, `VALID_MODES`, `DEFAULT_TRANSFER_VALUE`, `DEFAULT_ENCODING`
+- `Simulation_Layer/fra_engine.py`: `SIMULATION_ROOT`, `PROJECT_ROOT`
+- `Simulation_Layer/Runner/main.py`: `PROJECT_ROOT`
+- `Representational_Layer/Src/output_writer.py`: `PROJECT_ROOT`
 
 ## Practical Tips
 
@@ -71,23 +71,23 @@ Before adding a new utility, search for it first with `rg`.
 ## Common Pitfalls
 
 - Mixing representational profile logic into simulation counting code.
-- Writing ad-hoc JSON schemas that bypass `global_utilities/json_io.py`.
+- Writing ad-hoc JSON schemas that bypass `Global_Utilities/json_io.py`.
 - Using `print` directly in library/runtime flow instead of logger wrappers.
 - Adding duplicate model classes in new files.
 
 ## Current Test Entry Points
 
-- `Representational Layer/tests/test_models.py`
-- `Representational Layer/tests/test_scoring.py`
-- `Representational Layer/tests/test_profile_based_ballot_generation.py`
-- `Representational Layer/tests/test_json_io.py`
+- `Representational_Layer/Tests/test_models.py`
+- `Representational_Layer/Tests/test_scoring.py`
+- `Representational_Layer/Tests/test_profile_based_ballot_generation.py`
+- `Representational_Layer/Tests/test_json_io.py`
 
 ## Where Visualization Should Plug In Later
 
 When you add visualization, consume outputs from:
 
 - `score_candidates_for_elector_unit(...)` (candidate score traces)
-- simulation-ready JSON outputs in `pipe/` (ballot and candidate payloads)
+- simulation-ready JSON outputs in `Pipe/` (ballot and candidate payloads)
 
 This keeps charts decoupled from core scoring/counting logic.
 
@@ -100,7 +100,7 @@ This keeps charts decoupled from core scoring/counting logic.
   - weighted random generation (`generate_ballot(...)` / `generate_weighted_ballot_ranking(...)`)
   - profile-scoring + deterministic sort (used in profile-based tests)
   - these should converge behind one simple public generation API.
-- `global_utilities/logger.py` currently uses `print` internally for output formatting. This is acceptable for now, but if structured observability is needed later, this should move to Python `logging` handlers.
+- `Global_Utilities/logger.py` currently uses `print` internally for output formatting. This is acceptable for now, but if structured observability is needed later, this should move to Python `logging` handlers.
 
 ### What is left to do
 
@@ -113,11 +113,11 @@ This keeps charts decoupled from core scoring/counting logic.
    - expose one orchestration entrypoint for: scoring -> ranking -> ballot objects -> simulation JSON export
    - keep per-method behavior selectable (`deterministic_sort`, weighted, softmax) behind that single entrypoint
 3. Vocabulary maturity:
-   - continue expanding and versioning shared attribute specs in `attributes/`
+   - continue expanding and versioning shared attribute specs in `Representational_Layer/Attributes/`
    - formalize weight presets and missing-value policies for reproducible experiments
 4. Visualization support:
    - add reusable export shape for plotting round-by-round candidate utilities and ballot distributions
    - produce starter notebooks or scripts for score and ranking diagnostics
 5. Documentation alignment:
    - keep `AGENTS.md` synchronized with each code change
-   - keep simulation handoff examples in `pipe/` aligned with current writer/readers
+   - keep simulation handoff examples in `Pipe/` aligned with current writer/readers
