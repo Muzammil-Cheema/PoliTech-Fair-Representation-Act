@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import ast
 import json
 from pathlib import Path
+import re
 import sys
 
 import pytest
@@ -15,8 +17,7 @@ if str(PROJECT_ROOT) not in sys.path:
 if str(SIMULATION_ROOT) not in sys.path:
     sys.path.append(str(SIMULATION_ROOT))
 
-from Runner.main import load_election_from_json, run_election
-
+from Simulation_Layer.Runner.main import run_cli
 
 CASE_DIR = PROJECT_ROOT / "Pipe" / "Acceptance_Test_Cases"
 REQUIRED_ELECTION_FIELDS = {
@@ -27,11 +28,80 @@ REQUIRED_ELECTION_FIELDS = {
     "seat_count",
     "tie_break_order",
 }
+ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*m")
 
 
-def run_case(filename: str) -> dict:
-    election = load_election_from_json(CASE_DIR / filename)
-    return run_election(election)
+def strip_ansi(text: str) -> str:
+    return ANSI_ESCAPE_RE.sub("", text)
+
+
+def parse_cli_output(stdout: str) -> dict:
+    lines = [line.strip() for line in stdout.splitlines() if line.strip()]
+
+    winners: list[str] | None = None
+    final_candidate_status: dict[str, str] = {}
+    rounds: list[dict] = []
+    current_round: dict | None = None
+    in_final_status = False
+
+    for line in lines:
+        if "Winners:" in line:
+            winners = ast.literal_eval(line.split("Winners:", 1)[1].strip())
+            continue
+
+        if "Final candidate status:" in line:
+            in_final_status = True
+            continue
+
+        if "Rounds:" in line:
+            in_final_status = False
+            continue
+
+        if in_final_status and ": " in line and "Round " not in line and "Vote totals:" not in line:
+            candidate_id, status = line.rsplit(": ", 1)
+            final_candidate_status[candidate_id.split()[-1]] = status
+            continue
+
+        round_match = re.search(r"Round (\d+):$", line)
+        if round_match:
+            current_round = {"round": int(round_match.group(1))}
+            rounds.append(current_round)
+            continue
+
+        if current_round is None:
+            continue
+
+        if "Vote totals:" in line:
+            current_round["vote_totals"] = ast.literal_eval(
+                line.split("Vote totals:", 1)[1].strip()
+            )
+            continue
+
+        if "Threshold:" in line:
+            current_round["threshold"] = ast.literal_eval(
+                line.split("Threshold:", 1)[1].strip()
+            )
+            continue
+
+        if "Action:" in line:
+            current_round["action"] = ast.literal_eval(
+                line.split("Action:", 1)[1].strip()
+            )
+
+    return {
+        "winners": winners or [],
+        "rounds": rounds,
+        "final_candidate_status": final_candidate_status,
+        "raw_output": stdout,
+    }
+
+
+def run_case(cli_path: str, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> dict:
+    monkeypatch.setattr("builtins.input", lambda: cli_path)
+    run_cli()
+    captured = capsys.readouterr()
+    clean_stdout = strip_ansi(captured.out)
+    return parse_cli_output(clean_stdout)
 
 
 def runnable_pipe_json_files() -> list[Path]:
@@ -53,8 +123,13 @@ def runnable_pipe_json_files() -> list[Path]:
     runnable_pipe_json_files(),
     ids=lambda path: path.relative_to(PROJECT_ROOT / "Pipe").as_posix(),
 )
-def test_all_runnable_pipe_json_files_complete(json_path: Path) -> None:
-    result = run_election(load_election_from_json(json_path))
+def test_all_runnable_pipe_json_files_complete(
+    json_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    cli_path = json_path.relative_to(PROJECT_ROOT / "Pipe").as_posix()
+    result = run_case(cli_path, monkeypatch, capsys)
 
     assert result["winners"]
     assert result["rounds"]
@@ -63,8 +138,11 @@ def test_all_runnable_pipe_json_files_complete(json_path: Path) -> None:
 # Verifies ordinary single-seat RCV elimination: the lowest candidate drops
 # first, their ballot transfers, and candidate C wins in the final two-candidate
 # round.
-def test_single_seat_ordinary_elimination() -> None:
-    result = run_case("01_single_seat_ordinary_elimination.json")
+def test_single_seat_ordinary_elimination(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    result = run_case("Acceptance_Test_Cases/01_single_seat_ordinary_elimination.json", monkeypatch, capsys)
 
     assert result["winners"] == ["C"]
     assert result["rounds"][0]["action"] == {"type": "eliminate", "candidate": "B"}
@@ -78,19 +156,25 @@ def test_single_seat_ordinary_elimination() -> None:
 
 # Verifies withdrawn candidates are inactive from the start, so first-choice
 # ballots for B immediately resolve to the next active ranking and elect A.
-def test_single_seat_with_withdrawn_candidate() -> None:
-    result = run_case("02_single_seat_with_withdrawn_candidate.json")
+def test_single_seat_with_withdrawn_candidate(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    result = run_case("Acceptance_Test_Cases/02_single_seat_with_withdrawn_candidate.json", monkeypatch, capsys)
 
     assert result["winners"] == ["A"]
     assert result["rounds"][0]["vote_totals"] == {"A": 3.0, "B": 0.0, "C": 1.0}
-    assert result["rounds"][0]["status"]["B"] == "withdrawn"
+    assert result["final_candidate_status"]["B"] == "withdrawn"
     assert result["final_candidate_status"]["A"] == "elected"
 
 
 # Verifies the single-seat counter stops correctly when only two active
 # candidates are present and elects the higher vote-getter in one round.
-def test_single_seat_two_active_candidates() -> None:
-    result = run_case("03_single_seat_two_active_candidates.json")
+def test_single_seat_two_active_candidates(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    result = run_case("Acceptance_Test_Cases/03_single_seat_two_active_candidates.json", monkeypatch, capsys)
 
     assert result["winners"] == ["A"]
     assert len(result["rounds"]) == 1
@@ -99,8 +183,11 @@ def test_single_seat_two_active_candidates() -> None:
 
 # Verifies multi-seat STV elects a candidate above threshold, transfers only
 # that candidate's surplus, and then fills the remaining seat with B.
-def test_multi_seat_one_candidate_exceeds_threshold() -> None:
-    result = run_case("04_multi_seat_one_candidate_exceeds_threshold.json")
+def test_multi_seat_one_candidate_exceeds_threshold(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    result = run_case("Acceptance_Test_Cases/04_multi_seat_one_candidate_exceeds_threshold.json", monkeypatch, capsys)
 
     assert result["winners"] == ["A", "B"]
     assert result["rounds"][0]["threshold"] == 2
@@ -116,8 +203,11 @@ def test_multi_seat_one_candidate_exceeds_threshold() -> None:
 
 # Verifies simultaneous surplus handling when two candidates clear the threshold
 # in the same round, producing both winners together.
-def test_multi_seat_multiple_candidates_exceed_threshold() -> None:
-    result = run_case("05_multi_seat_multiple_candidates_exceed_threshold.json")
+def test_multi_seat_multiple_candidates_exceed_threshold(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    result = run_case("Acceptance_Test_Cases/05_multi_seat_multiple_candidates_exceed_threshold.json", monkeypatch, capsys)
 
     assert result["winners"] == ["A", "B"]
     assert result["rounds"][0]["threshold"] == 3
@@ -133,8 +223,11 @@ def test_multi_seat_multiple_candidates_exceed_threshold() -> None:
 
 # Verifies the no-threshold-elimination path in STV: D is eliminated first, C
 # is then elected at threshold, and B claims the last remaining seat.
-def test_multi_seat_lowest_candidate_eliminated() -> None:
-    result = run_case("06_multi_seat_lowest_candidate_eliminated.json")
+def test_multi_seat_lowest_candidate_eliminated(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    result = run_case("Acceptance_Test_Cases/06_multi_seat_lowest_candidate_eliminated.json", monkeypatch, capsys)
 
     assert result["winners"] == ["B", "C"]
     assert result["rounds"][1]["action"] == {"type": "eliminate", "candidate": "D"}
@@ -152,8 +245,11 @@ def test_multi_seat_lowest_candidate_eliminated() -> None:
 
 # Verifies an undervote ballot contributes nothing to the tally and the counted
 # ballots alone still elect A.
-def test_undervote_ballot_ignored() -> None:
-    result = run_case("07_undervote_ballot_ignored.json")
+def test_undervote_ballot_ignored(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    result = run_case("Acceptance_Test_Cases/07_undervote_ballot_ignored.json", monkeypatch, capsys)
 
     assert result["winners"] == ["A"]
     assert result["rounds"][0]["vote_totals"] == {"A": 2.0, "B": 1.0}
@@ -162,8 +258,11 @@ def test_undervote_ballot_ignored() -> None:
 
 # Verifies a ballot with only eliminated candidates becomes inactive instead of
 # transferring further, leaving the final round tied 2-2 between A and B.
-def test_ballot_becomes_inactive_all_ranked_candidates_inactive() -> None:
-    result = run_case("08_ballot_becomes_inactive_all_ranked_candidates_inactive.json")
+def test_ballot_becomes_inactive_all_ranked_candidates_inactive(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    result = run_case("Acceptance_Test_Cases/08_ballot_becomes_inactive_all_ranked_candidates_inactive.json", monkeypatch, capsys)
 
     assert result["winners"] == ["A"]
     assert result["rounds"][0]["action"] == {"type": "eliminate", "candidate": "C"}
@@ -173,8 +272,11 @@ def test_ballot_becomes_inactive_all_ranked_candidates_inactive() -> None:
 
 # Verifies skipped ranks are preserved: after A is eliminated, the ballot with a
 # missing rank 2 still transfers from rank 1 to rank 3 and keeps C competitive.
-def test_skipped_ranking_remains_valid() -> None:
-    result = run_case("09_skipped_ranking_remains_valid.json")
+def test_skipped_ranking_remains_valid(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    result = run_case("Acceptance_Test_Cases/09_skipped_ranking_remains_valid.json", monkeypatch, capsys)
 
     assert result["winners"] == ["B"]
     assert result["rounds"][0]["action"] == {"type": "eliminate", "candidate": "A"}
@@ -183,8 +285,11 @@ def test_skipped_ranking_remains_valid() -> None:
 
 # Verifies repeated candidate rankings remain valid: the ballot transfers using
 # the earliest later usable ranking and does not become invalid.
-def test_repeated_candidate_remains_valid() -> None:
-    result = run_case("10_repeated_candidate_remains_valid.json")
+def test_repeated_candidate_remains_valid(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    result = run_case("Acceptance_Test_Cases/10_repeated_candidate_remains_valid.json", monkeypatch, capsys)
 
     assert result["winners"] == ["B"]
     assert result["rounds"][0]["action"] == {"type": "eliminate", "candidate": "A"}
@@ -193,8 +298,11 @@ def test_repeated_candidate_remains_valid() -> None:
 
 # Verifies a same-rank group causes temporary inactivity when first reached, but
 # becomes usable later once only one candidate in that rank group is still active.
-def test_same_rank_assignment_causes_inactivity() -> None:
-    result = run_case("11_same_rank_assignment_causes_inactivity.json")
+def test_same_rank_assignment_causes_inactivity(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    result = run_case("Acceptance_Test_Cases/11_same_rank_assignment_causes_inactivity.json", monkeypatch, capsys)
 
     assert result["winners"] == ["C"]
     assert result["rounds"][0]["action"] == {"type": "eliminate", "candidate": "A"}
@@ -209,8 +317,11 @@ def test_same_rank_assignment_causes_inactivity() -> None:
 
 # Verifies the deterministic tie-break rule drives both elimination and the
 # final winner selection in an otherwise perfectly tied single-seat contest.
-def test_tie_break_rule_deterministic() -> None:
-    result = run_case("12_tie_break_rule_deterministic.json")
+def test_tie_break_rule_deterministic(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    result = run_case("Acceptance_Test_Cases/12_tie_break_rule_deterministic.json", monkeypatch, capsys)
 
     assert result["winners"] == ["B"]
     assert result["rounds"][0]["action"] == {"type": "eliminate", "candidate": "A"}
@@ -219,8 +330,11 @@ def test_tie_break_rule_deterministic() -> None:
 
 # Verifies STV completion can end the count once the remaining active candidates
 # fit exactly into the remaining seats, filling all three seats without more rounds.
-def test_completion_when_remaining_candidates_match_seats() -> None:
-    result = run_case("13_completion_when_remaining_candidates_match_seats.json")
+def test_completion_when_remaining_candidates_match_seats(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    result = run_case("Acceptance_Test_Cases/13_completion_when_remaining_candidates_match_seats.json", monkeypatch, capsys)
 
     assert result["winners"] == ["A", "B", "C"]
     assert result["rounds"][0]["threshold"] == 2
@@ -237,8 +351,11 @@ def test_completion_when_remaining_candidates_match_seats() -> None:
 
 # Verifies a candidate elected exactly at threshold has zero surplus, so those
 # ballots transfer forward at value 0 and the final winners are A and C, not all three.
-def test_candidate_reaches_threshold_exactly() -> None:
-    result = run_case("14_candidate_reaches_threshold_exactly.json")
+def test_candidate_reaches_threshold_exactly(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    result = run_case("Acceptance_Test_Cases/14_candidate_reaches_threshold_exactly.json", monkeypatch, capsys)
 
     assert result["winners"] == ["A", "C"]
     assert result["rounds"][1]["action"] == {
