@@ -6,6 +6,7 @@ This repository has two separate code layers that should stay separate:
 
 - `Representational_Layer/`: generates candidates and ranked ballots.
 - `Simulation_Layer/`: consumes election JSON and runs FRA counting rules.
+- `Fair Representation Act MMD/`: placeholder for future multi-member-district generation work.
 
 The fastest way to avoid regressions is to treat those as separate products with a shared JSON boundary.
 
@@ -17,6 +18,8 @@ The fastest way to avoid regressions is to treat those as separate products with
 - Use `Global_Utilities/logger.py` wrappers (`info/warn/success/error`) for runtime messaging.
 - Keep reusable attribute vocabulary in `Representational_Layer/Attributes/starter_attributes.py`.
 - Put generated handoff JSON in `Pipe/` through the JSON helpers.
+- Keep local/debug representational outputs in `Representational_Layer/Outputs/` when a test also needs an inspection copy.
+- Use the root `pyproject.toml` for shared package, Python path, and pytest configuration.
 
 ## What Already Exists (Do Not Duplicate)
 
@@ -32,6 +35,10 @@ The fastest way to avoid regressions is to treat those as separate products with
   - `Representational_Layer/Src/output_writer.py` (thin wrapper for representational tests)
 - Acceptance fixtures:
   - `Pipe/Acceptance_Test_Cases/*.json`
+- Simulation-ready representational exports:
+  - `Pipe/test_*_output.json`
+- Optional local inspection exports:
+  - `Representational_Layer/Outputs/test_*_output.json`
 
 Before adding a new utility, search for it first with `rg`.
 
@@ -39,7 +46,7 @@ Before adding a new utility, search for it first with `rg`.
 
 1. `cd "Representational_Layer"`
 2. Activate env: `source ../.venv/bin/activate` (or local env equivalent)
-3. Run tests: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q`
+3. Run tests from the repository root or from `Representational_Layer/`: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q`
 4. Generate/refresh simulation-ready JSON through `write_simulation_ready_output(...)` or `write_simulation_ready_json(...)`.
 
 ## Environment Variables And Globals
