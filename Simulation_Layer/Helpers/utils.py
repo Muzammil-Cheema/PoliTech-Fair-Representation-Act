@@ -64,6 +64,7 @@ def append_round(
     totals: Dict[str, float],
     action: Optional[Dict],
     include_threshold: bool,
+    ballot_allocations: Optional[Dict[str, Optional[str]]] = None,
 ) -> None:
     round_entry = {
         "round": election.round_number,
@@ -71,6 +72,8 @@ def append_round(
         "status": status.copy(),
         "action": action,
     }
+    if ballot_allocations is not None:
+        round_entry["ballot_allocations"] = ballot_allocations.copy()
     if include_threshold:
         round_entry["threshold"] = election.threshold
     rounds.append(round_entry)
@@ -80,20 +83,23 @@ def count_votes_single_round(
     election: Election,
     status: Dict[str, str],
     use_transfer_values: bool,
-) -> Dict[str, float]:
+) -> tuple[Dict[str, float], Dict[str, Optional[str]]]:
     active_set = set(active_candidates(status))
     totals: Dict[str, float] = {cid: 0.0 for cid in status.keys()}
+    ballot_allocations: Dict[str, Optional[str]] = {}
 
     for ballot in election.ballots:
         if is_undervote(ballot):
+            ballot_allocations[ballot.ballot_id] = None
             continue
         candidate_id = highest_ranked_active(ballot, active_set)
+        ballot_allocations[ballot.ballot_id] = candidate_id
         if candidate_id is None:
             continue
         value = ballot.current_transfer_value if use_transfer_values else 1.0
         totals[candidate_id] += value
 
-    return totals
+    return totals, ballot_allocations
 
 
 def apply_threshold_to_elected(
@@ -108,16 +114,61 @@ def apply_threshold_to_elected(
             totals[candidate_id] = threshold
 
 
-def distribute_surplus_transfer_values(
+def build_surplus_fractions(
+    elected_candidate_ids: list[str],
+    totals: Dict[str, float],
+    threshold: Optional[float],
+) -> tuple[Dict[str, float], list[Dict[str, float | str]]]:
+    if threshold is None:
+        error("Cannot compute surplus fractions without threshold")
+
+    surplus_fractions: Dict[str, float] = {}
+    action_detail: list[Dict[str, float | str]] = []
+    for candidate_id in elected_candidate_ids:
+        vote_total = totals.get(candidate_id, 0.0)
+        if vote_total <= 0:
+            surplus_fraction = 0.0
+        else:
+            surplus_fraction = truncate_4((vote_total - threshold) / vote_total)
+            if surplus_fraction < 0:
+                surplus_fraction = 0.0
+
+        surplus_fractions[candidate_id] = surplus_fraction
+        action_detail.append(
+            {"candidate": candidate_id, "surplus_fraction": surplus_fraction}
+        )
+
+    return surplus_fractions, action_detail
+
+
+def apply_simultaneous_surplus_transfer_values(
     election: Election,
-    elected_candidate_id: str,
-    surplus_fraction: float,
+    round_ballot_allocations: Dict[str, Optional[str]],
+    surplus_fractions: Dict[str, float],
 ) -> None:
-    active_set_for_this = {elected_candidate_id}
+    # Compute all updated transfer values from a stable round snapshot and then
+    # apply them together, so simultaneous surpluses cannot observe one another's
+    # in-pass mutations.
+    updates_by_ballot_id: Dict[str, float] = {}
+
     for ballot in election.ballots:
-        current_candidate_id = highest_ranked_active(ballot, active_set_for_this)
-        if current_candidate_id != elected_candidate_id:
+        allocated_candidate_id = round_ballot_allocations.get(ballot.ballot_id)
+        if allocated_candidate_id is None:
             continue
-        ballot.current_transfer_value = truncate_4(
+
+        if allocated_candidate_id not in surplus_fractions:
+            continue
+
+        surplus_fraction = surplus_fractions[allocated_candidate_id]
+        updates_by_ballot_id[ballot.ballot_id] = truncate_4(
             ballot.current_transfer_value * surplus_fraction
         )
+
+    if not updates_by_ballot_id:
+        return
+
+    for ballot in election.ballots:
+        updated_transfer_value = updates_by_ballot_id.get(ballot.ballot_id)
+        if updated_transfer_value is None:
+            continue
+        ballot.current_transfer_value = updated_transfer_value

@@ -18,16 +18,16 @@ from Global_Utilities import error, info, read_simulation_ready_json, success
 from Helpers.utils import (
     active_candidates,
     add_winner,
+    apply_simultaneous_surplus_transfer_values,
     append_round,
     apply_threshold_to_elected,
+    build_surplus_fractions,
     compute_threshold,
     count_votes_single_round,
-    distribute_surplus_transfer_values,
     elected_candidates,
     eliminate_candidate,
     initial_candidate_status,
     tie_break,
-    truncate_4,
 )
 
 
@@ -37,7 +37,9 @@ def run_single_seat_rcv(election: Election) -> Dict:
 
     while True:
         election.round_number += 1
-        totals = count_votes_single_round(election, status, use_transfer_values=False)
+        totals, ballot_allocations = count_votes_single_round(
+            election, status, use_transfer_values=False
+        )
         append_round(
             rounds=rounds,
             election=election,
@@ -45,6 +47,7 @@ def run_single_seat_rcv(election: Election) -> Dict:
             totals={cid: totals.get(cid, 0.0) for cid in status.keys()},
             action=None,
             include_threshold=False,
+            ballot_allocations=ballot_allocations,
         )
 
         active = active_candidates(status)
@@ -80,7 +83,9 @@ def run_multi_seat_stv(election: Election) -> Dict:
     rounds: List[Dict] = []
 
     election.round_number += 1
-    totals = count_votes_single_round(election, status, use_transfer_values=True)
+    totals, ballot_allocations = count_votes_single_round(
+        election, status, use_transfer_values=True
+    )
     first_round_total = sum(value for candidate_id, value in totals.items() if status[candidate_id] == "active")
     election.threshold = compute_threshold(first_round_total, election.seat_count)
     append_round(
@@ -90,6 +95,7 @@ def run_multi_seat_stv(election: Election) -> Dict:
         totals=totals,
         action=None,
         include_threshold=True,
+        ballot_allocations=ballot_allocations,
     )
 
     while True:
@@ -104,6 +110,7 @@ def run_multi_seat_stv(election: Election) -> Dict:
         if len(active) + seats_filled <= election.seat_count:
             for candidate_id in active:
                 add_winner(status, candidate_id)
+            election.round_number += 1
             append_round(
                 rounds=rounds,
                 election=election,
@@ -111,6 +118,7 @@ def run_multi_seat_stv(election: Election) -> Dict:
                 totals=totals,
                 action={"type": "fill_remaining_seats", "candidates": active},
                 include_threshold=True,
+                ballot_allocations=ballot_allocations,
             )
             break
 
@@ -121,26 +129,21 @@ def run_multi_seat_stv(election: Election) -> Dict:
                 elected_this_round.append(candidate_id)
 
         if elected_this_round:
-            action_detail: list[Dict] = []
-            for candidate_id in elected_this_round:
-                vote_total = totals.get(candidate_id, 0.0)
-                if vote_total <= 0:
-                    action_detail.append({"candidate": candidate_id, "surplus_fraction": 0.0})
-                    continue
-
-                surplus_fraction = truncate_4((vote_total - (election.threshold or 0)) / vote_total)
-                if surplus_fraction < 0:
-                    surplus_fraction = 0.0
-                action_detail.append({"candidate": candidate_id, "surplus_fraction": surplus_fraction})
-
-                distribute_surplus_transfer_values(
-                    election=election,
-                    elected_candidate_id=candidate_id,
-                    surplus_fraction=surplus_fraction,
-                )
+            surplus_fractions, action_detail = build_surplus_fractions(
+                elected_candidate_ids=elected_this_round,
+                totals=totals,
+                threshold=election.threshold,
+            )
+            apply_simultaneous_surplus_transfer_values(
+                election=election,
+                round_ballot_allocations=ballot_allocations,
+                surplus_fractions=surplus_fractions,
+            )
 
             election.round_number += 1
-            totals = count_votes_single_round(election, status, use_transfer_values=True)
+            totals, ballot_allocations = count_votes_single_round(
+                election, status, use_transfer_values=True
+            )
             apply_threshold_to_elected(totals, status, election.threshold)
             append_round(
                 rounds=rounds,
@@ -149,6 +152,7 @@ def run_multi_seat_stv(election: Election) -> Dict:
                 totals=totals,
                 action={"type": "elect_and_transfer", "details": action_detail},
                 include_threshold=True,
+                ballot_allocations=ballot_allocations,
             )
             continue
 
@@ -162,7 +166,9 @@ def run_multi_seat_stv(election: Election) -> Dict:
             action = None
 
         election.round_number += 1
-        totals = count_votes_single_round(election, status, use_transfer_values=True)
+        totals, ballot_allocations = count_votes_single_round(
+            election, status, use_transfer_values=True
+        )
         apply_threshold_to_elected(totals, status, election.threshold)
         append_round(
             rounds=rounds,
@@ -171,6 +177,7 @@ def run_multi_seat_stv(election: Election) -> Dict:
             totals=totals,
             action=action,
             include_threshold=True,
+            ballot_allocations=ballot_allocations,
         )
 
     final_status = status.copy()

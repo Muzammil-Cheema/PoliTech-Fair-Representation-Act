@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import sys
 
@@ -18,11 +19,45 @@ from Runner.main import load_election_from_json, run_election
 
 
 CASE_DIR = PROJECT_ROOT / "Pipe" / "Acceptance_Test_Cases"
+REQUIRED_ELECTION_FIELDS = {
+    "ballots",
+    "candidates",
+    "election_id",
+    "mode",
+    "seat_count",
+    "tie_break_order",
+}
 
 
 def run_case(filename: str) -> dict:
     election = load_election_from_json(CASE_DIR / filename)
     return run_election(election)
+
+
+def runnable_pipe_json_files() -> list[Path]:
+    runnable_files: list[Path] = []
+    for path in sorted((PROJECT_ROOT / "Pipe").rglob("*.json")):
+        with path.open("r", encoding="utf-8") as json_file:
+            payload = json.load(json_file)
+
+        metadata = payload.get("metadata", {}) if isinstance(payload, dict) else {}
+        available_fields = set(payload.keys()) | set(metadata.keys()) if isinstance(payload, dict) else set()
+        if REQUIRED_ELECTION_FIELDS.issubset(available_fields):
+            runnable_files.append(path)
+
+    return runnable_files
+
+
+@pytest.mark.parametrize(
+    "json_path",
+    runnable_pipe_json_files(),
+    ids=lambda path: path.relative_to(PROJECT_ROOT / "Pipe").as_posix(),
+)
+def test_all_runnable_pipe_json_files_complete(json_path: Path) -> None:
+    result = run_election(load_election_from_json(json_path))
+
+    assert result["winners"]
+    assert result["rounds"]
 
 
 # Verifies ordinary single-seat RCV elimination: the lowest candidate drops
@@ -210,7 +245,7 @@ def test_candidate_reaches_threshold_exactly() -> None:
         "type": "elect_and_transfer",
         "details": [{"candidate": "A", "surplus_fraction": 0.0}],
     }
-    assert result["rounds"][1]["vote_totals"] == {"A": 2, "B": 0.0, "C": 0.0}
+    assert result["rounds"][1]["vote_totals"] == {"A": 2, "B": 1.0, "C": 1.0}
     assert result["rounds"][-1]["action"] == {
         "type": "fill_remaining_seats",
         "candidates": ["C"],
