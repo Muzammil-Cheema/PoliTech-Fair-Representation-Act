@@ -2,3 +2,18 @@
 __pycache__/
 .DS_Store
 .idea/
+.venv/
+.pytest_cache/
+.ipynb_checkpoints/
+*.egg-info/
+
+# JetBrains local workspace metadata
+shelf/
+workspace.xml
+httpRequests/
+dataSources/
+dataSources.local.xml
+*.iml
+
+# MMD generated artifacts
+MMD_Generation_Layer/Outputs/
