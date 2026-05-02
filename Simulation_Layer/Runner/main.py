@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from typing import Dict, List
 
-# Allow direct execution via: python "Simulation Layer/runner/main.py"
+# Allow direct execution via: python "Simulation_Layer/Runner/main.py"
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parent.parent))
 
@@ -12,10 +12,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
-from core.config import MODE_SINGLE_SEAT_RCV
-from core.models import Election
-from global_utilities import error, info, read_simulation_ready_json, success
-from helpers.utils import (
+from Core.config import MODE_SINGLE_SEAT_RCV
+from Core.models import Election
+from Global_Utilities import error, info, read_simulation_ready_json, success
+from Helpers.utils import (
     active_candidates,
     add_winner,
     append_round,
@@ -212,7 +212,7 @@ def load_election_from_json(path: str) -> Election:
 def run_cli() -> None:
     info("Fair Representation Act Counting Engine")
     info("Interactive mode.")
-    info("Enter path to election JSON (matching the Simulation Layer Design Specification).")
+    info("Enter path to election JSON (matching the Simulation_Layer Design Specification).")
     info("Path:")
     path = input().strip()
 

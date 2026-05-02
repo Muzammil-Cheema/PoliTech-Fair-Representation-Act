@@ -28,4 +28,4 @@ def __getattr__(name: str):
         from . import json_io
 
         return getattr(json_io, name)
-    raise AttributeError(f"module 'global_utilities' has no attribute '{name}'")
+    raise AttributeError(f"module 'Global_Utilities' has no attribute '{name}'")

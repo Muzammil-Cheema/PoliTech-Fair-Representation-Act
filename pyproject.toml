@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fair-representation-act"
+version = "0.1.0"
+description = "Representational and simulation layers for Fair Representation Act election experiments."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+pythonpath = [
+  ".",
+  "Representational_Layer",
+  "Representational_Layer/Src",
+  "Simulation_Layer",
+]
+testpaths = [
+  "Representational_Layer/Tests",
+  "Simulation_Layer/Tests",
+]
+
+[tool.setuptools]
+package-dir = {"" = "."}
+
+[tool.setuptools.packages.find]
+where = [
+  "Representational_Layer/Src",
+  "Simulation_Layer",
+  ".",
+]
+include = [
+  "Representational_Layer*",
+  "Attributes*",
+  "Core*",
+  "Helpers*",
+  "Runner*",
+  "Global_Utilities*",
+]

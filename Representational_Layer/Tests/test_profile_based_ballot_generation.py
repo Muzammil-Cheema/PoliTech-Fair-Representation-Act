@@ -1,10 +1,10 @@
-from attributes import (
+from Attributes import (
     STARTER_ACTIVE_ATTRIBUTES,
     STARTER_ATTRIBUTE_WEIGHTS,
     get_starter_attribute_specs,
 )
 from output_writer import write_simulation_ready_output
-from representational_layer import (
+from Representational_Layer import (
     Ballot,
     BallotGenerationRun,
     Candidate,

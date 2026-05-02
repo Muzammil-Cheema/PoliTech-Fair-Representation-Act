@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Literal, Optional
 
-from global_utilities.logger import error
+from Global_Utilities.logger import error
 
 from .config import DEFAULT_TRANSFER_VALUE, VALID_MODES
 

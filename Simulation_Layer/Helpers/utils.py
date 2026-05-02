@@ -3,9 +3,9 @@ from __future__ import annotations
 import math
 from typing import Dict, Optional
 
-from core.models import Election
-from global_utilities.logger import error
-from helpers.edge_cases import highest_ranked_active, is_undervote
+from Core.models import Election
+from Global_Utilities.logger import error
+from Helpers.edge_cases import highest_ranked_active, is_undervote
 
 
 def initial_candidate_status(election: Election) -> Dict[str, str]:

@@ -1,6 +1,6 @@
 from random import Random
 
-from representational_layer import (
+from Representational_Layer import (
     Ballot,
     BallotGenerationRun,
     Candidate,

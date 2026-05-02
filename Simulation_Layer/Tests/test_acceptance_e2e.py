@@ -7,17 +7,17 @@ import pytest
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SIMULATION_ROOT = PROJECT_ROOT / "Simulation Layer"
+SIMULATION_ROOT = PROJECT_ROOT / "Simulation_Layer"
 
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 if str(SIMULATION_ROOT) not in sys.path:
     sys.path.append(str(SIMULATION_ROOT))
 
-from runner.main import load_election_from_json, run_election
+from Runner.main import load_election_from_json, run_election
 
 
-CASE_DIR = PROJECT_ROOT / "pipe" / "acceptance_test_cases"
+CASE_DIR = PROJECT_ROOT / "Pipe" / "Acceptance_Test_Cases"
 
 
 def run_case(filename: str) -> dict:

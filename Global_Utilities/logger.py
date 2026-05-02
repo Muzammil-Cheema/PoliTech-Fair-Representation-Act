@@ -4,10 +4,10 @@ import sys
 from typing import NoReturn
 
 RESET = "\033[0m"
-BLUE = "\033[34m"
-GREEN = "\033[32m"
-RED = "\033[31m"
-YELLOW = "\033[33m"
+BLUE = "\033[94m"
+GREEN = "\033[92m"
+RED = "\033[91m"
+YELLOW = "\033[93m"
 
 
 def _log(color: str, tag: str, symbol: str, message: str) -> None:

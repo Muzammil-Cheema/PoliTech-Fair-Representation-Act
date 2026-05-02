@@ -1,9 +1,11 @@
 from .edge_cases import highest_ranked_active, is_undervote, sorted_rankings
 from .utils import (
     active_candidates,
+    apply_simultaneous_surplus_transfer_values,
     add_winner,
     append_round,
     apply_threshold_to_elected,
+    build_surplus_fractions,
     compute_threshold,
     count_votes_single_round,
     eliminate_candidate,
@@ -15,9 +17,11 @@ from .utils import (
 
 __all__ = [
     "active_candidates",
+    "apply_simultaneous_surplus_transfer_values",
     "add_winner",
     "append_round",
     "apply_threshold_to_elected",
+    "build_surplus_fractions",
     "compute_threshold",
     "count_votes_single_round",
     "elected_candidates",

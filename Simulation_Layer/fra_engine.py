@@ -4,9 +4,9 @@ from __future__ import annotations
 Compatibility shim.
 
 The simulation engine implementation now lives under:
-  - core/
-  - helpers/
-  - runner/main.py
+  - Core/
+  - Helpers/
+  - Runner/main.py
 """
 
 import sys
@@ -19,8 +19,8 @@ if str(PROJECT_ROOT) not in sys.path:
 if str(SIMULATION_ROOT) not in sys.path:
     sys.path.append(str(SIMULATION_ROOT))
 
-from core.models import Ballot, Candidate, Election, Mode, Ranking
-from runner.main import (
+from Core.models import Ballot, Candidate, Election, Mode, Ranking
+from Runner.main import (
     load_election_from_json,
     run_cli,
     run_election,

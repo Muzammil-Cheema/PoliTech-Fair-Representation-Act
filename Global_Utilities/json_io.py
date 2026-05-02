@@ -7,14 +7,14 @@ import sys
 from typing import Any, Mapping, Protocol, Sequence, TypedDict
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-SIMULATION_ROOT = PROJECT_ROOT / "Simulation Layer"
-PIPE_DIR_NAME = "pipe"
+SIMULATION_ROOT = PROJECT_ROOT / "Simulation_Layer"
+PIPE_DIR_NAME = "Pipe"
 
 if str(SIMULATION_ROOT) not in sys.path:
     sys.path.append(str(SIMULATION_ROOT))
 
-from core.config import DEFAULT_ENCODING
-from core.models import Ballot, Candidate, Mode, Ranking
+from Core.config import DEFAULT_ENCODING
+from Core.models import Ballot, Candidate, Mode, Ranking
 from .logger import error
 
 
@@ -55,10 +55,10 @@ SimulationJsonObjects = tuple[
 
 def resolve_pipe_path(path: str | Path, project_root: Path | None = None) -> Path:
     """
-    Resolve a path through the shared process `pipe/` directory.
+    Resolve a path through the shared process `Pipe/` directory.
 
     Absolute paths are left unchanged. Relative paths are resolved as:
-      <project_root>/pipe/<path>
+      <project_root>/Pipe/<path>
     """
     path_obj = Path(path)
     if path_obj.is_absolute():

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from core.models import Ballot, Ranking
+from Core.models import Ballot, Ranking
 
 
 def is_undervote(ballot: Ballot) -> bool:
