@@ -5,7 +5,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
-from Global_Utilities import read_simulation_ready_json
+from Global_Utilities import read_simulation_ready_json, resolve_pipe_path
 from output_writer import write_simulation_ready_output
 from Representational_Layer import Ballot, Candidate, RankGroup
 
@@ -65,3 +65,8 @@ def test_global_json_io_returns_typed_simulation_objects(tmp_path: Path) -> None
     assert ballots[0].rankings[0].candidate_ids == ["cand-a"]
     assert tie_break_order == ["cand-a", "cand-b"]
     assert max_ranks_allowed == 2
+
+
+def test_resolve_pipe_path_accepts_bare_and_pipe_prefixed_relative_paths(tmp_path: Path) -> None:
+    assert resolve_pipe_path("input.json", project_root=tmp_path) == tmp_path / "Pipe" / "input.json"
+    assert resolve_pipe_path("Pipe/input.json", project_root=tmp_path) == tmp_path / "Pipe" / "input.json"
