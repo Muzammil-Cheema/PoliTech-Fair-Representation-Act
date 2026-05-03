@@ -53,13 +53,16 @@ def resolve_pipe_path(path: str | Path, project_root: Path | None = None) -> Pat
     Resolve a path through the shared process `Pipe/` directory.
 
     Absolute paths are left unchanged. Relative paths are resolved as:
-      <project_root>/Pipe/<path>
+      - `<project_root>/Pipe/<path>` for bare relative filenames
+      - `<project_root>/<path>` when the caller already supplied a `Pipe/...` path
     """
     path_obj = Path(path)
     if path_obj.is_absolute():
         return path_obj
 
     root = project_root or PROJECT_ROOT
+    if path_obj.parts and path_obj.parts[0] == PIPE_DIR_NAME:
+        return root / path_obj
     return root / PIPE_DIR_NAME / path_obj
 
 

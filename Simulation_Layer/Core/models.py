@@ -22,11 +22,15 @@ class Ranking:
     candidate_ids: List[str]
 
 
+BallotState = Literal["active", "inactive"]
+
+
 @dataclass
 class Ballot:
     ballot_id: str
     rankings: List[Ranking] = field(default_factory=list)
     current_transfer_value: float = DEFAULT_TRANSFER_VALUE
+    state: BallotState = "active"
 
 
 @dataclass
@@ -45,6 +49,18 @@ class Election:
     round_log: List[Dict] = field(default_factory=list)
 
     def __post_init__(self) -> None:
+        """Validate election shape and ballot references after dataclass init.
+
+        Validates:
+        - seat count and mode compatibility,
+        - candidate ID uniqueness and tie-break completeness,
+        - ballot rank positivity and candidate ID references,
+        - optional max-rank cap compliance.
+
+        Notes:
+            Validation failures are routed through `Global_Utilities.error(...)`,
+            which exits the process with a non-zero status.
+        """
         if self.seat_count < 1:
             error("seat_count must be at least 1")
 
@@ -61,6 +77,10 @@ class Election:
         valid_ids = set(ids)
 
         for ballot in self.ballots:
+            if ballot.state not in ("active", "inactive"):
+                error(
+                    f"Ballot {ballot.ballot_id} has invalid state '{ballot.state}'"
+                )
             for ranking in ballot.rankings:
                 if ranking.rank <= 0:
                     error(

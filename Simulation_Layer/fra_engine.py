@@ -2,6 +2,13 @@ from __future__ import annotations
 
 """Compatibility shim for the simulation engine public API."""
 
+from pathlib import Path
+import sys
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from Simulation_Layer.Core.models import Ballot, Candidate, Election, Mode, Ranking
 from Simulation_Layer.Runner.main import (
     load_election_from_json,

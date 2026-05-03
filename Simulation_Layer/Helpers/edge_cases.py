@@ -6,10 +6,26 @@ from Simulation_Layer.Core.models import Ballot, Ranking
 
 
 def is_undervote(ballot: Ballot) -> bool:
+    """Return whether a ballot is an undervote (contains no rankings).
+
+    Args:
+        ballot: Ballot to evaluate.
+
+    Returns:
+        True when the ballot has no rankings, else False.
+    """
     return len(ballot.rankings) == 0
 
 
 def sorted_rankings(ballot: Ballot) -> list[Ranking]:
+    """Return ballot rankings ordered by ascending rank number.
+
+    Args:
+        ballot: Ballot containing rank groups.
+
+    Returns:
+        A new list of ranking groups sorted by `rank`.
+    """
     return sorted(ballot.rankings, key=lambda r: r.rank)
 
 
@@ -17,14 +33,20 @@ def highest_ranked_active(
     ballot: Ballot,
     active_candidate_ids: set[str],
 ) -> Optional[str]:
-    """
-    Handles ranking edge cases:
+    """Resolve a ballot to its highest-ranked unambiguous active candidate.
 
-    - Undervotes: no rankings -> ballot never counts.
-    - Skipped rankings: allowed; continue to next rank with any active candidate.
-    - Repeated rankings: earliest usable active ranking wins.
-    - Same-rank groups: if first reachable active rank has multiple active
-      candidates, ballot becomes inactive.
+    Edge-case behavior:
+    - Undervotes: no rankings, so no allocation.
+    - Skipped ranks: ignored until an active candidate appears.
+    - Repeated candidates: first usable active placement wins.
+    - Same-rank multi-active ambiguity: no allocation for that round.
+
+    Args:
+        ballot: Ballot to resolve.
+        active_candidate_ids: Candidate IDs currently active in the round.
+
+    Returns:
+        Candidate ID when an unambiguous active choice is found, otherwise None.
     """
     if is_undervote(ballot):
         return None
