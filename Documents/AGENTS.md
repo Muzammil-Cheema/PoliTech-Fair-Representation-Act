@@ -36,6 +36,11 @@ This file must be updated after **every LLM-authored code change** so the docume
 - Use `refactor: <message>` for refactoring-only changes.
 - Use `test: <message>` for testing changes, adding or removing tests, running tests, and sharing test results.
 
+## Git Workflow Rule
+
+- Continue working on `main` by default.
+- Do not create or switch to a new Git branch unless the user explicitly asks for one.
+
 ## Environment Variables
 
 ### Required by source code

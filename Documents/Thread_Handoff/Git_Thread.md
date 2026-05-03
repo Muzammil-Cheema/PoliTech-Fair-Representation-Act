@@ -14,6 +14,10 @@ Its job is to handle:
 
 It is not the main implementation thread. It should not take ownership of feature design, architecture, or broad code changes unless the user explicitly asks for Git-related cleanup that requires a small edit.
 
+## Branch Rule
+
+Stay on `main` by default. Do not create or switch to a new branch unless the user explicitly asks for branch-based work.
+
 ## Commit Message Rules
 
 Use the commit prefixes defined in `AGENTS.md`:
