@@ -104,7 +104,7 @@ This file must be updated after **every LLM-authored code change** so the docume
 ### Repository root
 - `README.md`: compatibility symlink to `Documents/README.md` for tooling and package metadata.
 - `AGENTS.md`: compatibility symlink to `Documents/AGENTS.md` for agent/tooling discovery.
-- `CONTRIBUTING.md`: contributor onboarding guide covering branch workflow, commit/PR conventions, and high-level engineering standards.
+- `CONTRIBUTING.md`: contributor onboarding guide covering issue-first workflow, branch/PR conventions, and high-level engineering standards.
 - `Documents/`: dedicated home for project markdown and handoff documentation.
 - `pyproject.toml`: shared package, editable-install, optional dependency, Python path, and pytest configuration for all layers.
   - Extras:
@@ -133,8 +133,8 @@ This file must be updated after **every LLM-authored code change** so the docume
 - Purpose:
   - Generates and visualizes baseline district-plan ensembles from geographic data.
   - Uses equal-population ReCom for baseline temporary SMD generation.
-  - Includes an experimental notebook-only MMD merge mode that converts temporary SMD plans into unequal-size MMD plans using a seat vector and seat-weighted population targets.
-  - Is still not a production FRA MMD generator module.
+  - Includes notebook and script workflows that convert temporary SMD plans into genuine FRA-style multimember district plans using a seat vector and seat-weighted population targets.
+  - Produces usable FRA multimember district artifacts, but still needs better proposal strategies and efficiency work before large-scale use.
 - `MMD_Generation_Layer/config.py`
   - Directories and paths:
     - `base_dir`
@@ -160,7 +160,7 @@ This file must be updated after **every LLM-authored code change** so the docume
 - `MMD_Generation_Layer/__init__.py`
   - Package marker for the MMD generation layer.
 - `MMD_Generation_Layer/Processor/main.ipynb`
-  - Notebook-driven GerryChain/ReCom pipeline plus experimental MMD merge workflow.
+  - Notebook-driven GerryChain/ReCom pipeline plus current FRA multimember generation workflow.
   - Runtime controls in notebook state cell:
     - `RUN_DEFAULTS` (snapshot of defaults sourced from `MMD_Generation_Layer/config.py` plus notebook-only controls)
     - `GENERATION_MODE` (`"SMD"` or `"MMD"`)
@@ -230,7 +230,7 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `bootstrap_run_config(config_path=None)`
     - `describe_run_config(run_config)`
 - `MMD_Generation_Layer/Processor/generation_logic.py`
-  - Script-based SMD generation and experimental MMD merge business logic.
+  - Script-based SMD generation and current FRA multimember generation business logic.
   - Functions:
     - `load_and_build_graph(shape_path=shape_path, id_col=ID_COLUMN, geom_col=GEOM_COLUMN)`
     - `create_initial_partition(graph, num_districts=NUM_DISTRICTS, seed=SEED, population_tolerance=0.05)`
@@ -512,8 +512,8 @@ This file must be updated after **every LLM-authored code change** so the docume
 
 - Current code remains notebook-heavy and is not yet a stabilized package API for MMD generation.
 - Baseline generation still depends on equal-population ReCom temporary SMD plans.
-- The current MMD workflow is an experimental BFS merge heuristic; it may fail to produce all requested plans under strict population tolerances.
-- Real FRA multimember maps will still need deeper validation and potentially broader plan-space exploration than the current merge heuristic provides.
+- The current MMD workflow can generate usable FRA multimember districts, but it still needs deeper validation, better proposal strategies, and stronger efficiency for larger runs.
+- Native GerryChain proposal approaches are still a planned improvement area and may produce better plan-space exploration than the current workflow.
 - Current checked-in MMD outputs may be stale relative to `NUM_DISTRICTS = 14`; verify outputs before relying on them for analysis.
 - Current MMD outputs do not yet create representational-layer `District` objects.
 - Current MMD outputs do not yet feed simulation-layer election JSON directly.

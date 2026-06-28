@@ -203,12 +203,10 @@ This keeps charts decoupled from core scoring/counting logic.
 ### High-priority known issues
 
 - The simulation layer has a strong acceptance-test base, but still needs hardening for long-run robustness and legal-confidence edge behavior under varied real-world input distributions.
-- The MMD generation layer is copied in and useful for baseline geographic experimentation, but it currently generates equal-population district plans rather than FRA-ready proportional-population multimember districts.
 - Representational ballot generation currently exists in two styles:
   - weighted random generation (`generate_ballot(...)` / `generate_weighted_ballot_ranking(...)`)
   - profile-scoring + deterministic sort (used in profile-based tests)
   - these should converge behind one simple public generation API.
-- `Global_Utilities/logger.py` currently uses `print` internally for output formatting. This is acceptable for now, but if structured observability is needed later, this should move to Python `logging` handlers.
 
 ### What is left to do
 
@@ -218,19 +216,24 @@ This keeps charts decoupled from core scoring/counting logic.
    - verify deterministic tie behavior persists cleanly across replay/recount workflows
    - improve invariant checks and failure diagnostics around transfer-value and threshold transitions
 2. MMD-generation maturity:
-   - convert the notebook-heavy copied workflow into reusable modules and tests
-   - add proportional population targets based on MMD seat counts
-   - generate true multimember district groupings instead of only equal-population baseline district plans
-   - define how MMD outputs should feed representational `District` objects later
-3. Representational-layer API simplification:
+   - continue improving efficiency in the MMD generation workflow, since it is currently the most computationally complex portion of the project
+   - reduce plan-generation cost and improve practical throughput for larger experiment runs
+3. MMD-generation proposal quality:
+   - try native GerryChain proposal strategies for FRA multimember generation instead of relying only on the current workflow
+   - compare proposal quality, runtime, and plan diversity against the current approach
+   - keep the resulting multimember plans usable for downstream research workflows
+4. Representational-layer API simplification:
    - expose one orchestration entrypoint for: scoring -> ranking -> ballot objects -> simulation JSON export
    - keep per-method behavior selectable (`deterministic_sort`, weighted, softmax) behind that single entrypoint
-4. Vocabulary maturity:
+5. Vocabulary maturity:
    - continue expanding and versioning shared attribute specs in `Representational_Layer/Attributes/`
    - formalize weight presets and missing-value policies for reproducible experiments
-5. Visualization support:
+6. Visualization support:
    - add reusable export shape for plotting round-by-round candidate utilities and ballot distributions
    - produce starter notebooks or scripts for score and ranking diagnostics
-6. Documentation alignment:
+7. Documentation alignment:
    - keep `AGENTS.md` synchronized with each code change
    - keep simulation handoff examples in `Pipe/` aligned with current writer/readers
+8. Logger modernization:
+   - `Global_Utilities/logger.py` currently uses `print` internally for output formatting
+   - if structured observability is needed later, move this behavior to Python `logging` handlers

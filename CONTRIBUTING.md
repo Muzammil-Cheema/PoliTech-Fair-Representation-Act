@@ -54,12 +54,69 @@ A good contribution usually does one of the following:
 
 ## Git Workflow
 
+### Start with an issue
+
+Contributions should begin with an issue.
+
+If you find:
+
+- a bug
+- a missing feature
+- a documentation gap
+- test coverage that should exist but does not
+- cleanup work that should be done
+
+then first check whether an issue already exists for that work.
+
+If an issue does not already exist, create one before starting the change so the work is visible, discussable, and easier to assign.
+
+This helps the team:
+
+- track open work
+- avoid duplicate effort
+- onboard new contributors faster
+- separate “what should be done” from “what code was written”
+
+### Issue title guidelines
+
+Issue titles should be short, specific, and action-oriented.
+
+Good examples:
+
+- `Set up project README`
+- `Implement contract parser`
+- `Fix packet delay calculation`
+- `Add test cases for routing logic`
+- `Clean up unused files`
+
+Prefer titles that clearly say what needs to happen rather than vague summaries.
+
+### Issue labels
+
+Use labels to make issue triage easier.
+
+Common labels for this project:
+
+- `bug`
+- `feature`
+- `documentation`
+- `cleanup`
+- `homework`
+- `priority-high`
+- `priority-low`
+- `good-first-issue`
+- `needs-review`
+- `blocked`
+
+Use the smallest useful set of labels. A typical issue might have one type label and one priority label.
+
 ### No direct commits to `main`
 
 Do not commit directly to `main`.
 
 All changes must use:
 
+1. an issue
 1. a branch
 2. a pull request
 3. at least one review before merge
@@ -234,6 +291,7 @@ Each PR should be understandable without deep archaeology.
 
 A good PR:
 
+- is linked to a clear issue
 - has one clear purpose
 - explains why the change was needed
 - lists how it was tested
@@ -261,6 +319,7 @@ How did you test this?
 
 ## Final Checklist Before Opening A PR
 
+- an issue exists for the work
 - the change is in the correct layer
 - branch name follows the convention
 - commit messages follow the convention
