@@ -21,6 +21,7 @@ This file must be updated after **every LLM-authored code change** so the docume
 7. Reuse existing models and helpers. Do not duplicate models in new files.
 8. Keep MMD generation, representational ballot generation, and simulation counting separate unless a task explicitly asks for integration.
 9. Treat current MMD outputs as district-generation artifacts, not simulation-ready election JSON.
+10. Do not add additional `README.md` or `AGENTS.md` files in subdirectories unless the user explicitly asks for them; use the global files in `Documents/` as the single source of truth.
 
 ## Naming Convention
 
@@ -78,6 +79,10 @@ This file must be updated after **every LLM-authored code change** so the docume
   - Run every canonical acceptance case through the CLI transcript path and validate printed winners against the fixture-derived oracle.
 - `streamlit run MMD_Generation_Layer/Client/baseline_dashboard.py`
   - Open the MMD baseline dashboard.
+- `python -m MMD_Generation_Layer.Processor.main --config MMD_Generation_Layer/Tests/Notebook_Run_Configs/smd_valid_small_debug.json`
+  - Run the script-based MMD/SMD generation pipeline from a JSON config.
+- `python -m MMD_Generation_Layer.Processor.main --dashboard-only`
+  - Launch the Streamlit dashboard through the script runner without generating new plans.
 
 ## Layer Boundary Contract
 
@@ -99,12 +104,14 @@ This file must be updated after **every LLM-authored code change** so the docume
 ### Repository root
 - `README.md`: compatibility symlink to `Documents/README.md` for tooling and package metadata.
 - `AGENTS.md`: compatibility symlink to `Documents/AGENTS.md` for agent/tooling discovery.
+- `CONTRIBUTING.md`: contributor onboarding guide covering branch workflow, commit/PR conventions, and high-level engineering standards.
 - `Documents/`: dedicated home for project markdown and handoff documentation.
 - `pyproject.toml`: shared package, editable-install, optional dependency, Python path, and pytest configuration for all layers.
   - Extras:
     - `dev`: pytest.
     - `mmd`: geospatial, notebook, GerryChain, and Streamlit dependencies.
-  - Explicit package mappings include `Representational_Layer`, `Attributes`, `Simulation_Layer`, `Core`, `Helpers`, `Runner`, `Global_Utilities`, and `MMD_Generation_Layer`.
+  - Explicit package mappings include `Representational_Layer`, `Attributes`, `Simulation_Layer`, `Core`, `Helpers`, `Runner`, `Global_Utilities`, `MMD_Generation_Layer`, and `MMD_Generation_Layer.Processor`.
+  - Quote dotted package names in TOML keys, for example `"MMD_Generation_Layer.Processor"`, so TOML does not treat them as nested keys.
 - `MMD_Generation_Layer/`: copied district-generation layer for geographic district-plan ensembles and dashboarding.
 - `Global_Utilities/`: shared logger and JSON contract helpers used across layers.
 - `Pipe/`: simulation handoff JSON inputs and acceptance fixtures.
@@ -118,14 +125,16 @@ This file must be updated after **every LLM-authored code change** so the docume
 - `Documents/Thread_Handoff/Git_Thread.md`: handoff for the Git-focused support thread.
 - `Documents/Thread_Handoff/Global_Thread.md`: handoff for the shared-infrastructure/global thread.
 - `Documents/Thread_Handoff/MMD_Thread.md`: handoff for the MMD-generation thread.
+- `Documents/Thread_Handoff/Representational_Thread.md`: handoff for the representational-layer implementation and research thread.
 - `Documents/Thread_Handoff/Simulation_Thread.md`: handoff for the simulation-layer implementation/debugging thread.
 - `Documents/Thread_Handoff/Testing_Thread.md`: handoff for the testing-focused support thread.
 
 ### `MMD_Generation_Layer/`
 - Purpose:
   - Generates and visualizes baseline district-plan ensembles from geographic data.
-  - Currently uses equal-population district targets across districts.
-  - Does not yet generate FRA-ready proportional-population multimember districts by seat count.
+  - Uses equal-population ReCom for baseline temporary SMD generation.
+  - Includes an experimental notebook-only MMD merge mode that converts temporary SMD plans into unequal-size MMD plans using a seat vector and seat-weighted population targets.
+  - Is still not a production FRA MMD generator module.
 - `MMD_Generation_Layer/config.py`
   - Directories and paths:
     - `base_dir`
@@ -151,14 +160,105 @@ This file must be updated after **every LLM-authored code change** so the docume
 - `MMD_Generation_Layer/__init__.py`
   - Package marker for the MMD generation layer.
 - `MMD_Generation_Layer/Processor/main.ipynb`
-  - Notebook-driven GerryChain/ReCom pipeline.
+  - Notebook-driven GerryChain/ReCom pipeline plus experimental MMD merge workflow.
+  - Runtime controls in notebook state cell:
+    - `RUN_DEFAULTS` (snapshot of defaults sourced from `MMD_Generation_Layer/config.py` plus notebook-only controls)
+    - `GENERATION_MODE` (`"SMD"` or `"MMD"`)
+    - `RUN_NUM_PLANS`
+    - `RUN_NUM_DISTRICTS`
+    - `RUN_SEED`
+    - `RUN_SHAPE_PATH`
+    - `RUN_ID_COLUMN`
+    - `RUN_GEOM_COLUMN`
+    - `MMD_SEAT_VECTOR`
+    - `MMD_SMD_MULTIPLIER`
+    - `MMD_PLANS_PER_SMD_PLAN`
+    - `POPULATION_TOLERANCE`
+    - `MAX_MMD_ATTEMPTS_PER_SMD_PLAN`
+    - `CONFIG_PATH`
+  - JSON config loader uses a single supported key: `seat_vector`.
+  - Legacy `mmd_seat_vector` is explicitly rejected with a clear validation error.
+  - In `MMD` mode, config validation fails fast unless `sum(seat_vector) == num_districts`.
+  - Config bootstrap behavior:
+    - `bootstrap_run_config(CONFIG_PATH)` is executed in the loader cell.
+    - If `CONFIG_PATH` is missing/empty, notebook continues with `RUN_DEFAULTS`.
+    - If config load/validation fails, notebook warns and resets to `RUN_DEFAULTS` instead of stopping execution.
   - Defines notebook-local functions:
+    - `_resolve_run_config_path(config_path)`
+    - `_validate_positive_int_list(name, value)`
+    - `_extract_seat_vector_from_config(config)`
+    - `_validate_run_config(config)`
+    - `reset_run_globals_to_defaults()`
+    - `apply_run_config(config)`
+    - `load_run_config(config_path)`
+    - `bootstrap_run_config(config_path=None)`
     - `load_and_build_graph(shape_path=shape_path, id_col=ID_COLUMN, geom_col=GEOM_COLUMN)`
-    - `create_initial_partition(graph, num_districts=NUM_DISTRICTS, seed=SEED)`
-    - `generate_baseline_ensemble(graph, num_plans=NUM_PLANS, num_districts=NUM_DISTRICTS, seed=42)`
+    - `create_initial_partition(graph, num_districts=NUM_DISTRICTS, seed=SEED, population_tolerance=0.05)`
+    - `generate_baseline_ensemble(graph, num_plans=NUM_PLANS, num_districts=NUM_DISTRICTS, seed=42, population_tolerance=0.05)`
+    - `_build_smd_unit_stats(smd_assignment, graph)`
+    - `_build_smd_adjacency(smd_assignment, graph)`
+    - `_find_bfs_merge_candidate(start_smd, seat_count, available_smd_ids, smd_adjacency, smd_population, per_seat_population, population_tolerance, max_states=20000)`
+    - `_validate_mmd_plan(mmd_plan, graph, seat_vector, population_tolerance)`
+    - `_build_single_mmd_plan(smd_assignment, graph, seat_vector, population_tolerance, seed)`
+    - `_mmd_plan_signature(mmd_plan)`
+    - `generate_mmd_ensemble_from_smd_ensemble(smd_ensemble, graph, seat_vector, plans_per_smd_plan=5, population_tolerance=0.05, seed=SEED, max_attempts_per_smd_plan=250)`
+    - `_runtime_mode_settings()`
+    - `_print_runtime_settings(mode_settings)`
+    - `build_graph_for_run()`
+    - `generate_ensemble_for_run(graph)`
+    - `save_results_for_run(ensemble)`
+    - `plot_results_for_run()`
+    - `cleanup_outputs_for_run()`
     - `save_results(ensemble, output_dir)`
     - `generate_district_csvs()`
     - `plot_baseline_histogram(csv_path, output_dir)`
+- `MMD_Generation_Layer/Processor/__init__.py`
+  - Package marker for script-based MMD processor modules.
+- `MMD_Generation_Layer/Processor/runtime_setup.py`
+  - Runtime config and JSON config loading for script-based MMD runs.
+  - Classes:
+    - `RunConfig`
+  - Functions:
+    - `default_run_config()`
+    - `resolve_run_config_path(config_path)`
+    - `resolve_runtime_path(path_value)`
+    - `validate_positive_int_list(name, value)`
+    - `extract_seat_vector_from_config(config)`
+    - `validate_run_config(config, base_config=None)`
+    - `apply_run_config(config, base_config=None)`
+    - `load_run_config(config_path, base_config=None)`
+    - `bootstrap_run_config(config_path=None)`
+    - `describe_run_config(run_config)`
+- `MMD_Generation_Layer/Processor/generation_logic.py`
+  - Script-based SMD generation and experimental MMD merge business logic.
+  - Functions:
+    - `load_and_build_graph(shape_path=shape_path, id_col=ID_COLUMN, geom_col=GEOM_COLUMN)`
+    - `create_initial_partition(graph, num_districts=NUM_DISTRICTS, seed=SEED, population_tolerance=0.05)`
+    - `generate_baseline_ensemble(graph, num_plans=NUM_PLANS, num_districts=NUM_DISTRICTS, seed=SEED, population_tolerance=0.05)`
+    - `_build_smd_unit_stats(smd_assignment, graph)`
+    - `_build_smd_adjacency(smd_assignment, graph)`
+    - `_find_bfs_merge_candidate(...)`
+    - `_validate_mmd_plan(mmd_plan, graph, seat_vector, population_tolerance)`
+    - `_build_single_mmd_plan(smd_assignment, graph, seat_vector, population_tolerance, seed)`
+    - `_mmd_plan_signature(mmd_plan)`
+    - `generate_mmd_ensemble_from_smd_ensemble(...)`
+    - `runtime_mode_settings(run_config)`
+    - `generate_ensemble_for_run(graph, run_config)`
+- `MMD_Generation_Layer/Processor/output_artifacts.py`
+  - Output persistence and optional diagnostic artifacts for generated plans.
+  - Functions:
+    - `save_ensemble_summary(ensemble, csv_path)`
+    - `save_plan_assignments(ensemble, plans_dir, clear_existing=True)`
+    - `plot_seat_share_histogram(results_df, output_path)`
+    - `generate_district_csvs(gdf, plans_dir, output_dir)`
+    - `save_output_artifacts(ensemble, run_config, gdf=None, include_plots=True, include_district_csvs=False)`
+- `MMD_Generation_Layer/Processor/main.py`
+  - Script entrypoint for running generation and optionally launching Streamlit.
+  - Functions:
+    - `run_generation_pipeline(config_path=None, include_plots=True, include_district_csvs=False)`
+    - `run_streamlit_dashboard(extra_args=None)`
+    - `parse_args(argv=None)`
+    - `main(argv=None)`
 - `MMD_Generation_Layer/Client/baseline_dashboard.py`
   - Streamlit dashboard for existing baseline outputs.
   - Functions:
@@ -173,6 +273,12 @@ This file must be updated after **every LLM-authored code change** so the docume
   - `seat_share.png`: notebook-generated Democratic seat-share histogram.
   - `democratic_seats.png`: dashboard-generated Democratic seat-count histogram.
   - `Plan_Assignments/plan_*.json`: precinct ID to district ID assignment maps.
+- `MMD_Generation_Layer/Tests/Notebook_Run_Configs/`
+  - JSON run configs loadable in the notebook via `load_run_config(...)`.
+  - `smd_valid_baseline.json`, `smd_valid_small_debug.json`: valid SMD scenarios.
+  - `mmd_valid_balanced.json`, `mmd_valid_high_variance.json`, `mmd_valid_seat_vector_alias.json`: valid MMD scenarios using `seat_vector`.
+  - `mmd_edge_strict_tolerance.json`, `mmd_edge_low_attempt_budget.json`: valid edge-case stress scenarios.
+  - `invalid_mode.json`, `invalid_negative_tolerance.json`, `invalid_tolerance_gt_one.json`, `invalid_empty_mmd_seat_vector.json`, `invalid_nonpositive_mmd_seat_vector.json`, `invalid_null_mmd_seat_vector.json`, `invalid_unknown_key.json`, `invalid_conflicting_seat_vectors.json`, `invalid_seat_vector_sum_mismatch.json`: invalid-input fixtures intended to raise fast validation errors (including legacy key rejection, bad `seat_vector` content, and seat-sum mismatch checks).
 
 ### `Representational_Layer/Attributes/`
 - `Representational_Layer/Attributes/__init__.py`
@@ -233,7 +339,7 @@ This file must be updated after **every LLM-authored code change** so the docume
   - `write_simulation_ready_output(test_name, ballots, candidates, metadata, project_root=None) -> Path`
   - Wraps global JSON helper and writes to `Pipe/`.
 - `Representational_Layer/Src/Representational_Layer/__init__.py`
-  - Public exports for models, generation, and scoring.
+  - Public exports for models, generation, scoring, and input-contract validation.
 - `Representational_Layer/Src/Representational_Layer/models.py`
   - Dataclasses:
     - `Experiment`
@@ -246,8 +352,19 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `BallotGenerationRun`
     - `RankGroup`
     - `Ballot`
+  - `PreferenceModel.temperature` is mandatory and must be supplied by callers.
   - Type aliases/literals:
     - `Profile`, `Parameters`, `ElectionMode`, `AttributeType`, `ComparisonMode`, `ScoreStyle`, `MissingValuePolicy`, `RankingMethod`
+- `Representational_Layer/Src/Representational_Layer/input_contract.py`
+  - Strict validator/parser for user-authored representational experiment JSON contracts.
+  - Separates dataclass-derived model-shape rules from explicit user-contract policy rules in the same file.
+  - Public classes:
+    - `ContractValidationError`
+    - `RepresentationalExperimentState`
+  - Public functions:
+    - `load_experiment_contract(path) -> RepresentationalExperimentState`
+    - `parse_experiment_contract(contract) -> RepresentationalExperimentState`
+  - Validates exact top-level and nested key ordering, mandatory fields, enum-like literal values, cross-reference integrity, district/election seat-rank consistency, non-empty profiles, custom attribute config requirements, and preference-model weight alignment.
 - `Representational_Layer/Src/Representational_Layer/scoring.py`
   - Public function:
     - `score_candidates_for_elector_unit(candidates, elector_unit, attribute_specs, preference_model) -> CandidateScores`
@@ -267,6 +384,12 @@ This file must be updated after **every LLM-authored code change** so the docume
   - `generate_ballot(ballot_id, generation_run_id, source_elector_unit_id, candidates, candidate_probabilities, rng) -> Ballot`
 
 ### `Representational_Layer/Tests/`
+- `Input_Contracts/`
+  - JSON fixtures for strict representational input-contract parsing.
+  - Includes one valid starter/custom contract plus invalid examples for missing mandatory fields, relationship mismatches, custom-attribute config errors, mandatory temperature, and key-order validation.
+- `test_input_contract.py`
+  - Tests strict loading of the representational JSON input contract and rejection of invalid contract fixtures.
+  - Uses small fixture helpers (`fixture_path`, `load_fixture`, `assert_contract_rejected`) and delegates all contract validation to `Representational_Layer.load_experiment_contract(...)`.
 - `test_models.py`
   - Smoke tests for baseline representational graph and weighted ranking generator.
 - `test_scoring.py`
@@ -387,13 +510,14 @@ This file must be updated after **every LLM-authored code change** so the docume
 
 ## MMD Layer Limitations
 
-- Current code is a copied baseline district-generation workflow, not a completed FRA MMD generator.
-- Current district generation uses one equal-population target across districts.
-- Real FRA multimember maps will need proportional population targets by seat count.
+- Current code remains notebook-heavy and is not yet a stabilized package API for MMD generation.
+- Baseline generation still depends on equal-population ReCom temporary SMD plans.
+- The current MMD workflow is an experimental BFS merge heuristic; it may fail to produce all requested plans under strict population tolerances.
+- Real FRA multimember maps will still need deeper validation and potentially broader plan-space exploration than the current merge heuristic provides.
 - Current checked-in MMD outputs may be stale relative to `NUM_DISTRICTS = 14`; verify outputs before relying on them for analysis.
 - Current MMD outputs do not yet create representational-layer `District` objects.
 - Current MMD outputs do not yet feed simulation-layer election JSON directly.
-- Current MMD generation is notebook-heavy; prefer extracting reusable logic into modules before adding larger features.
+- Current MMD mode still needs extraction into reusable modules before API hardening.
 
 ## Global Constants Inventory
 
@@ -411,13 +535,20 @@ This file must be updated after **every LLM-authored code change** so the docume
   - `PROJECT_ROOT`
 - `Representational_Layer/Src/output_writer.py`
   - `PROJECT_ROOT`
+- `Representational_Layer/Src/Representational_Layer/input_contract.py`
+  - Model-shape constants derived from dataclass fields: `TOP_LEVEL_KEYS`, `EXPERIMENT_KEYS`, `DISTRICT_KEYS`, `ELECTION_KEYS`, `ATTRIBUTE_SPEC_KEYS`, `CANDIDATE_KEYS`, `ELECTOR_UNIT_KEYS`, `PREFERENCE_MODEL_KEYS`, `BALLOT_GENERATION_RUN_KEYS`
+  - Explicit contract-policy constants: `TOP_LEVEL_REQUIRED_KEYS`, `EXPERIMENT_REQUIRED_KEYS`, `DISTRICT_REQUIRED_KEYS`, `ELECTION_REQUIRED_KEYS`, `ATTRIBUTE_SPEC_REQUIRED_KEYS`, `NEW_ATTRIBUTE_SPEC_REQUIRED_KEYS`, `CANDIDATE_REQUIRED_KEYS`, `ELECTOR_UNIT_REQUIRED_KEYS`, `PREFERENCE_MODEL_REQUIRED_KEYS`, `BALLOT_GENERATION_RUN_REQUIRED_KEYS`
+  - Internal model-shape helper constant: `_ASSIGNED_EXPERIMENT_FIELD`
+  - `VALID_ELECTION_MODES`, `VALID_ATTRIBUTE_TYPES`, `VALID_COMPARISON_MODES`, `VALID_SCORE_STYLES`, `VALID_MISSING_VALUE_POLICIES`, `VALID_RANKING_METHODS`
 - Test-only globals:
+  - `Representational_Layer/Tests/test_input_contract.py`: `FIXTURE_DIR`
   - `Representational_Layer/Tests/test_json_io.py`: `PROJECT_ROOT`
   - `Simulation_Layer/Tests/acceptance_helpers.py`: `PROJECT_ROOT`, `SIMULATION_ROOT`, `CASE_DIR`, `ACCEPTANCE_REPLAY_RUNS`, `REQUIRED_ELECTION_FIELDS`, `ANSI_ESCAPE_RE`, `DEFAULT_TEST_TRANSFER_VALUE`
 
 ## Import Path Guidance
 
 - Prefer `Representational_Layer.models`, `Representational_Layer.generation`, and `Representational_Layer.scoring` for external representational imports.
+- Prefer `Representational_Layer.load_experiment_contract(...)` for user-authored representational JSON input contracts.
 - Keep implementation edits in `Representational_Layer/Src/Representational_Layer/` unless the task is specifically about compatibility wrappers.
 - Prefer `Simulation_Layer.Core.models`, `Simulation_Layer.Helpers.utils`, and `Simulation_Layer.Runner.main` for simulation imports.
 - Avoid adding new top-level import shims unless there is a clear compatibility reason and `pyproject.toml` is updated.
@@ -426,6 +557,7 @@ This file must be updated after **every LLM-authored code change** so the docume
 
 ### Representational layer classes
 
+- `ContractValidationError`
 - `Experiment`
 - `District`
 - `Election`
@@ -436,6 +568,7 @@ This file must be updated after **every LLM-authored code change** so the docume
 - `BallotGenerationRun`
 - `RankGroup`
 - `Ballot`
+- `RepresentationalExperimentState`
 
 ### Simulation layer classes
 

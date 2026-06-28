@@ -25,6 +25,39 @@ Current implementation:
 
 Important limitation: the current MMD code generates equal-population district plans with one population target across districts. Real FRA multimember maps will need proportional population targets by seat count, for example a 5-seat MMD should target roughly five times the ideal single-seat population. That proportional MMD grouping work is still future work.
 
+### MMD notebook run configs
+
+The notebook supports JSON run configs stored under `MMD_Generation_Layer/Tests/Notebook_Run_Configs/`.
+
+You can load one manually inside `MMD_Generation_Layer/Processor/main.ipynb` with:
+
+```python
+load_run_config("../Tests/Notebook_Run_Configs/smd_valid_baseline.json")
+```
+
+Or set:
+
+```python
+CONFIG_PATH = "../Tests/Notebook_Run_Configs/smd_valid_baseline.json"
+```
+
+The notebook bootstrap loader will apply that config automatically.
+
+Config categories:
+
+- `smd_valid_*`: expected-valid SMD scenarios.
+- `mmd_valid_*`: expected-valid MMD scenarios.
+- `mmd_edge_*`: syntactically valid, but may produce fewer plans or fail under strict constraints.
+- `invalid_*`: intentionally invalid inputs for validation-path testing.
+
+Important config rules:
+
+- `generation_mode` must be `"SMD"` or `"MMD"`.
+- `population_tolerance` must be strictly between `0` and `1`.
+- In `MMD` mode, `seat_vector` must be a non-empty list of positive integers.
+- Legacy `mmd_seat_vector` is intentionally rejected with a clear error.
+- The loader is strict and raises errors on unknown keys.
+
 ## Best-Practice Structure
 
 - Keep representational experiments in `Representational_Layer/Src/Representational_Layer/`.
