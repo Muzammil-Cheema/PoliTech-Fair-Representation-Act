@@ -163,6 +163,7 @@ packages = [
   "Runner",
   "Global_Utilities",
   "MMD_Generation_Layer",
+  "MMD_Generation_Layer.Processor",
 ]
 
 [tool.setuptools.package-dir]
@@ -174,3 +175,4 @@ Helpers = "Simulation_Layer/Helpers"
 Runner = "Simulation_Layer/Runner"
 Global_Utilities = "Global_Utilities"
 MMD_Generation_Layer = "MMD_Generation_Layer"
+"MMD_Generation_Layer.Processor" = "MMD_Generation_Layer/Processor"
