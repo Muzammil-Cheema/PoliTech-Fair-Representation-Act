@@ -97,11 +97,11 @@ class PreferenceModel:
     preference_model_id: str
     experiment_id: str
     name: str
+    temperature: float
     active_attributes: list[str] = field(default_factory=list)
     attribute_weights: dict[str, float] = field(default_factory=dict)
     missing_value_policy: MissingValuePolicy = "ignore"
     ranking_method: RankingMethod = "deterministic_sort"
-    temperature: float | None = None
     parameters: Parameters = field(default_factory=dict)
     description: str | None = None
 

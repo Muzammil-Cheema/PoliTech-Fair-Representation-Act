@@ -62,6 +62,7 @@ def test_scores_candidates_with_normalized_attribute_and_final_scores() -> None:
         preference_model_id="pref-001",
         experiment_id="exp-001",
         name="normalized-baseline",
+        temperature=1.0,
         active_attributes=[
             "ideology_score",
             "party_id",
@@ -125,6 +126,7 @@ def test_missing_value_ignore_renormalizes_by_valid_weights_only() -> None:
         preference_model_id="pref-002",
         experiment_id="exp-001",
         name="missing-ignore",
+        temperature=1.0,
         active_attributes=["ideology_score", "party_id"],
         attribute_weights={"ideology_score": 0.8, "party_id": 0.2},
         missing_value_policy="ignore",

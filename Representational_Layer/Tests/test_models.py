@@ -44,6 +44,7 @@ def test_can_build_minimal_experiment_graph() -> None:
         preference_model_id="pref-001",
         experiment_id=experiment.experiment_id,
         name="baseline",
+        temperature=1.0,
     )
     generation_run = BallotGenerationRun(
         generation_run_id="run-001",
@@ -112,6 +113,7 @@ def test_can_generate_rankings_for_multiple_elector_units() -> None:
         preference_model_id="pref-002",
         experiment_id=experiment.experiment_id,
         name="hardcoded_weighted_ranking",
+        temperature=1.0,
         parameters={"method": "weighted_without_replacement"},
     )
     generation_run = BallotGenerationRun(
