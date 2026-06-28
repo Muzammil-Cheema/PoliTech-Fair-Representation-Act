@@ -1,6 +1,6 @@
 # Politech Fair Representation Act
 
-## For Humans: How To Work In This Repo
+## For Humans: Understanding this Repo
 
 This repository has three separate code layers that should stay separate:
 
