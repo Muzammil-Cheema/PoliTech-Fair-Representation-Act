@@ -1,6 +1,12 @@
 """Representational-layer data model for Fair Representation Act experiments."""
 
 from .generation import generate_ballot, generate_weighted_ballot_ranking
+from .input_contract import (
+    ContractValidationError,
+    RepresentationalExperimentState,
+    load_experiment_contract,
+    parse_experiment_contract,
+)
 from .models import (
     AttributeSpec,
     AttributeType,
@@ -30,6 +36,7 @@ __all__ = [
     "BallotGenerationRun",
     "Candidate",
     "ComparisonMode",
+    "ContractValidationError",
     "District",
     "Election",
     "ElectionMode",
@@ -41,8 +48,11 @@ __all__ = [
     "Profile",
     "RankGroup",
     "RankingMethod",
+    "RepresentationalExperimentState",
     "ScoreStyle",
     "generate_ballot",
     "generate_weighted_ballot_ranking",
+    "load_experiment_contract",
+    "parse_experiment_contract",
     "score_candidates_for_elector_unit",
 ]
