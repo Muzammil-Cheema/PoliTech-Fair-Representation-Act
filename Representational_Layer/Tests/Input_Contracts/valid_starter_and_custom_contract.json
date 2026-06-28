@@ -1,0 +1,101 @@
+{
+  "experiment": {
+    "experiment_id": "exp-contract-001",
+    "description": "Valid one-district contract with starter and custom attributes."
+  },
+  "districts": [
+    {
+      "district_id": "district-north",
+      "population": 100000,
+      "seat_target": 3
+    }
+  ],
+  "elections": [
+    {
+      "election_id": "election-north",
+      "district_id": "district-north",
+      "mode": "multi_seat_stv",
+      "max_rankings_allowed": 3
+    }
+  ],
+  "attribute_specs": [
+    {
+      "name": "party_id"
+    },
+    {
+      "attribute_spec_id": "attr-local-fit",
+      "name": "local_fit",
+      "attribute_type": "categorical",
+      "comparison_mode": "custom",
+      "score_style": "signed",
+      "config": {
+        "custom_scores": {
+          "urban|urban": 1.0,
+          "urban|rural": -0.5,
+          "rural|urban": -0.5,
+          "rural|rural": 1.0
+        }
+      },
+      "description": "Custom urban/rural fit score."
+    }
+  ],
+  "candidates": [
+    {
+      "candidate_id": "cand-a",
+      "election_id": "election-north",
+      "profile": {
+        "party_id": "D",
+        "local_fit": "urban"
+      }
+    },
+    {
+      "candidate_id": "cand-b",
+      "election_id": "election-north",
+      "withdrawn": false,
+      "home_district_id": "district-north",
+      "profile": {
+        "party_id": "R",
+        "local_fit": "rural"
+      }
+    }
+  ],
+  "elector_units": [
+    {
+      "elector_unit_id": "block-urban",
+      "election_id": "election-north",
+      "size": 1200,
+      "profile": {
+        "party_id": "D",
+        "local_fit": "urban"
+      }
+    }
+  ],
+  "preference_models": [
+    {
+      "preference_model_id": "pref-contract",
+      "name": "baseline_model",
+      "temperature": 1.0,
+      "active_attributes": [
+        "party_id",
+        "local_fit"
+      ],
+      "attribute_weights": {
+        "party_id": 0.7,
+        "local_fit": 0.3
+      },
+      "missing_value_policy": "ignore",
+      "ranking_method": "deterministic_sort",
+      "parameters": {},
+      "description": "Valid deterministic preference model."
+    }
+  ],
+  "ballot_generation_runs": [
+    {
+      "generation_run_id": "run-contract",
+      "election_id": "election-north",
+      "preference_model_id": "pref-contract",
+      "random_seed": 42,
+      "notes": "Valid generation run."
+    }
+  ]
+}

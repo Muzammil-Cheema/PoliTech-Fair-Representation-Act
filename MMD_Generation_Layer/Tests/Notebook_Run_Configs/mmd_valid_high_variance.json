@@ -1,0 +1,20 @@
+{
+  "generation_mode": "MMD",
+  "num_plans": 120,
+  "num_districts": 14,
+  "seed": 424242,
+  "shape_path": "../Data/Shapefiles/NC/nc_2024_with_population.shp",
+  "id_column": "UNIQUE_ID",
+  "geom_column": "the_geom",
+  "population_tolerance": 0.06,
+  "mmd_smd_multiplier": 10,
+  "mmd_plans_per_smd_plan": 5,
+  "max_mmd_attempts_per_smd_plan": 300,
+  "notes": "Valid MMD run with a wider seat-size spread.",
+  "expected_behavior": "Should run, but may generate fewer unique MMD plans for some temporary SMD seeds.",
+  "seat_vector": [
+    5,
+    5,
+    4
+  ]
+}

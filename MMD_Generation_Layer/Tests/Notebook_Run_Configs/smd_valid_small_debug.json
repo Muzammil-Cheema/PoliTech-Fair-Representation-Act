@@ -1,0 +1,12 @@
+{
+  "generation_mode": "SMD",
+  "num_plans": 15,
+  "num_districts": 14,
+  "seed": 12345,
+  "shape_path": "../Data/Shapefiles/NC/nc_2024_with_population.shp",
+  "id_column": "UNIQUE_ID",
+  "geom_column": "the_geom",
+  "population_tolerance": 0.05,
+  "notes": "Small quick-run SMD scenario for debugging and smoke checks.",
+  "expected_behavior": "Should complete quickly and write fewer plan assignment files."
+}

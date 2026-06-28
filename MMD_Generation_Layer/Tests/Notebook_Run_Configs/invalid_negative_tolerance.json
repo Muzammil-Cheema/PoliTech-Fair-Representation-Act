@@ -1,0 +1,19 @@
+{
+  "generation_mode": "MMD",
+  "num_plans": 100,
+  "num_districts": 14,
+  "seed": 67676767,
+  "shape_path": "../Data/Shapefiles/NC/nc_2024_with_population.shp",
+  "id_column": "UNIQUE_ID",
+  "geom_column": "the_geom",
+  "population_tolerance": -0.05,
+  "notes": "Negative tolerance is invalid.",
+  "expected_behavior": "load_run_config should raise ValueError for population_tolerance bounds.",
+  "seat_vector": [
+    3,
+    3,
+    4,
+    5,
+    5
+  ]
+}

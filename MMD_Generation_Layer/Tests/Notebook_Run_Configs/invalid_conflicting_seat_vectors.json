@@ -1,0 +1,19 @@
+{
+  "generation_mode": "MMD",
+  "num_plans": 100,
+  "num_districts": 14,
+  "seed": 67676767,
+  "shape_path": "../Data/Shapefiles/NC/nc_2024_with_population.shp",
+  "id_column": "UNIQUE_ID",
+  "geom_column": "the_geom",
+  "population_tolerance": 0.05,
+  "mmd_seat_vector": [
+    3,
+    3,
+    4,
+    5,
+    5
+  ],
+  "notes": "Legacy key only; should now fail because seat_vector is the only supported key.",
+  "expected_behavior": "load_run_config should raise ValueError indicating mmd_seat_vector is no longer supported."
+}

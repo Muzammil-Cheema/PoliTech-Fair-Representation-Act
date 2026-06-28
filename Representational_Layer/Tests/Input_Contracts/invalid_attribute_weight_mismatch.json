@@ -1,0 +1,61 @@
+{
+  "experiment": {
+    "experiment_id": "exp-contract-004"
+  },
+  "districts": [
+    {
+      "district_id": "district-north",
+      "population": 100000,
+      "seat_target": 1
+    }
+  ],
+  "elections": [
+    {
+      "election_id": "election-north",
+      "district_id": "district-north",
+      "mode": "single_seat_rcv",
+      "max_rankings_allowed": 1
+    }
+  ],
+  "attribute_specs": [],
+  "candidates": [
+    {
+      "candidate_id": "cand-a",
+      "election_id": "election-north",
+      "profile": {
+        "party_id": "D"
+      }
+    }
+  ],
+  "elector_units": [
+    {
+      "elector_unit_id": "block-urban",
+      "election_id": "election-north",
+      "size": 100,
+      "profile": {
+        "party_id": "D"
+      }
+    }
+  ],
+  "preference_models": [
+    {
+      "preference_model_id": "pref-contract",
+      "name": "baseline_model",
+      "temperature": 1.0,
+      "active_attributes": [
+        "party_id"
+      ],
+      "attribute_weights": {
+        "party_id": 1.0,
+        "ideology_score": 0.5
+      }
+    }
+  ],
+  "ballot_generation_runs": [
+    {
+      "generation_run_id": "run-contract",
+      "election_id": "election-north",
+      "preference_model_id": "pref-contract"
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "experiment": {
+    "experiment_id": "exp-contract-005"
+  },
+  "districts": [
+    {
+      "district_id": "district-north",
+      "population": 100000,
+      "seat_target": 1
+    }
+  ],
+  "elections": [
+    {
+      "election_id": "election-north",
+      "district_id": "district-north",
+      "mode": "single_seat_rcv",
+      "max_rankings_allowed": 1
+    }
+  ],
+  "attribute_specs": [
+    {
+      "attribute_spec_id": "attr-local-fit",
+      "name": "local_fit",
+      "attribute_type": "categorical",
+      "comparison_mode": "custom",
+      "score_style": "signed"
+    }
+  ],
+  "candidates": [
+    {
+      "candidate_id": "cand-a",
+      "election_id": "election-north",
+      "profile": {
+        "local_fit": "urban"
+      }
+    }
+  ],
+  "elector_units": [
+    {
+      "elector_unit_id": "block-urban",
+      "election_id": "election-north",
+      "size": 100,
+      "profile": {
+        "local_fit": "urban"
+      }
+    }
+  ],
+  "preference_models": [
+    {
+      "preference_model_id": "pref-contract",
+      "name": "baseline_model",
+      "temperature": 1.0,
+      "active_attributes": [
+        "local_fit"
+      ],
+      "attribute_weights": {
+        "local_fit": 1.0
+      }
+    }
+  ],
+  "ballot_generation_runs": [
+    {
+      "generation_run_id": "run-contract",
+      "election_id": "election-north",
+      "preference_model_id": "pref-contract"
+    }
+  ]
+}

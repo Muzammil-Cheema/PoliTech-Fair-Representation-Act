@@ -1,0 +1,13 @@
+{
+  "generation_mode": "SMD",
+  "num_plans": 20,
+  "num_districts": 14,
+  "seed": 1234,
+  "shape_path": "../Data/Shapefiles/NC/nc_2024_with_population.shp",
+  "id_column": "UNIQUE_ID",
+  "geom_column": "the_geom",
+  "population_tolerance": 0.05,
+  "foo": "bar",
+  "notes": "Unknown key should fail under strict config validation.",
+  "expected_behavior": "load_run_config should raise ValueError for unsupported keys."
+}

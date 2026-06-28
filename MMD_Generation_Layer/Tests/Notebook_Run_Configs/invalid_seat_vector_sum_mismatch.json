@@ -1,0 +1,20 @@
+{
+  "generation_mode": "MMD",
+  "num_plans": 80,
+  "num_districts": 14,
+  "seed": 4242,
+  "shape_path": "../Data/Shapefiles/NC/nc_2024_with_population.shp",
+  "id_column": "UNIQUE_ID",
+  "geom_column": "the_geom",
+  "population_tolerance": 0.05,
+  "seat_vector": [
+    6,
+    5,
+    4
+  ],
+  "mmd_smd_multiplier": 10,
+  "mmd_plans_per_smd_plan": 5,
+  "max_mmd_attempts_per_smd_plan": 250,
+  "notes": "Seat-vector sum mismatch test: 6+5+4=15 while num_districts=14.",
+  "expected_behavior": "load_run_config should raise ValueError for seat-vector sum mismatch."
+}

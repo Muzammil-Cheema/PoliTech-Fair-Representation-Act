@@ -1,0 +1,20 @@
+{
+  "generation_mode": "MMD",
+  "num_plans": 80,
+  "num_districts": 14,
+  "seed": 777,
+  "shape_path": "../Data/Shapefiles/NC/nc_2024_with_population.shp",
+  "id_column": "UNIQUE_ID",
+  "geom_column": "the_geom",
+  "population_tolerance": 0.01,
+  "mmd_smd_multiplier": 10,
+  "mmd_plans_per_smd_plan": 5,
+  "max_mmd_attempts_per_smd_plan": 400,
+  "notes": "Valid but intentionally strict tolerance stress test.",
+  "expected_behavior": "May produce partial plan sets or zero valid plans depending on merge feasibility.",
+  "seat_vector": [
+    5,
+    5,
+    4
+  ]
+}
