@@ -114,6 +114,18 @@ Use the smallest useful set of labels. A typical issue might have one type label
 
 Do not commit directly to `main`.
 
+Do not develop directly on `main` either.
+
+Every contribution, no matter how small, should begin from a new branch. That includes:
+
+- features
+- bug fixes
+- documentation updates
+- tests
+- cleanup work
+
+Contributors should first update local `main`, then create a branch for the issue they are working on.
+
 All changes must use:
 
 1. an issue
@@ -137,6 +149,20 @@ Examples:
 - `fix/stv-surplus-transfer-rounding`
 - `docs/update-onboarding-guide`
 - `test/add-json-roundtrip-regression`
+
+This branch-first rule is the default workflow for the repo. Do not skip branch creation just because a change seems small or simple.
+
+### Update local before pushing
+
+Before pushing anything to the remote, make sure your local repo is updated with the remote state.
+
+Acceptable ways to do this include:
+
+- `git pull`
+- `git fetch` followed by the appropriate merge or rebase workflow
+- using the project update action in JetBrains IDEs
+
+Do not push blindly from stale local state.
 
 ### Merge strategy
 

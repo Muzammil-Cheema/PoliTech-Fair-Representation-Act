@@ -34,13 +34,25 @@ This file must be updated after **every LLM-authored code change** so the docume
 
 - Use `feat: <message>` for feature work.
 - Use `fix: <message>` for bug fixes.
+- Use `docs: <message>` for documentation changes.
 - Use `refactor: <message>` for refactoring-only changes.
 - Use `test: <message>` for testing changes, adding or removing tests, running tests, and sharing test results.
 
 ## Git Workflow Rule
 
-- Continue working on `main` by default.
-- Do not create or switch to a new Git branch unless the user explicitly asks for one.
+- Follow the workflow defined in `CONTRIBUTING.md`; treat that file as the source of truth for contributor Git workflow.
+- Start work from an issue when possible. If a bug, feature, documentation gap, missing test, or cleanup task does not already have an issue, create one before starting the change.
+- Do not work on `main` directly for ordinary project changes.
+- Create a new Git branch for every change, even for small documentation, testing, bug-fix, cleanup, or feature tasks.
+- Start branch work from an updated local `main`, then use the repo's branch-and-PR workflow.
+- Before pushing anything to the remote, update the local repo with the remote state by pulling, fetching, or using the IDE's project update flow.
+- Open a PR for review and use squash merge into `main`.
+- Use branch names with one of these prefixes:
+  - `feat/<short-description>`
+  - `fix/<short-description>`
+  - `docs/<short-description>`
+  - `refactor/<short-description>`
+  - `test/<short-description>`
 
 ## Environment Variables
 
