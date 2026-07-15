@@ -25,6 +25,7 @@ RUN_CONFIG_ALLOWED_KEYS = {
     "mmd_smd_multiplier",
     "mmd_plans_per_smd_plan",
     "max_mmd_attempts_per_smd_plan",
+    "save_intermediate_smd_plans",
     "expected_behavior",
     "notes",
 }
@@ -46,6 +47,7 @@ class RunConfig:
     mmd_plans_per_smd_plan: int
     population_tolerance: float
     max_mmd_attempts_per_smd_plan: int
+    save_intermediate_smd_plans: bool
     output_dir: Path
     plans_dir: Path
     ensemble_csv_path: Path
@@ -67,6 +69,7 @@ def default_run_config() -> RunConfig:
         mmd_plans_per_smd_plan=project_config.MMD_PLANS_PER_SMD_PLAN,
         population_tolerance=project_config.POPULATION_TOLERANCE,
         max_mmd_attempts_per_smd_plan=project_config.MAX_MMD_ATTEMPTS_PER_SMD_PLAN,
+        save_intermediate_smd_plans=project_config.SAVE_INTERMEDIATE_SMD_PLANS,
         output_dir=project_config.output_dir,
         plans_dir=project_config.plans_dir,
         ensemble_csv_path=project_config.ensemble_csv_path,
@@ -154,6 +157,10 @@ def validate_run_config(config: dict[str, Any], base_config: RunConfig | None = 
             if not isinstance(value, int) or value <= 0:
                 raise ValueError(f"{key} must be a positive integer")
 
+    if "save_intermediate_smd_plans" in config:
+        if not isinstance(config["save_intermediate_smd_plans"], bool):
+            raise ValueError("save_intermediate_smd_plans must be a boolean")
+
     if "population_tolerance" in config:
         tolerance = config["population_tolerance"]
         if not isinstance(tolerance, (int, float)):
@@ -208,6 +215,12 @@ def apply_run_config(
                 base_config.max_mmd_attempts_per_smd_plan,
             )
         ),
+        save_intermediate_smd_plans=bool(
+            config.get(
+                "save_intermediate_smd_plans",
+                base_config.save_intermediate_smd_plans,
+            )
+        ),
         output_dir=base_config.output_dir,
         plans_dir=base_config.plans_dir,
         ensemble_csv_path=base_config.ensemble_csv_path,
@@ -253,3 +266,4 @@ def describe_run_config(run_config: RunConfig) -> None:
     info(f"seed: {run_config.seed}")
     info(f"population_tolerance: {run_config.population_tolerance}")
     info(f"seat_vector: {list(run_config.seat_vector)}")
+    info(f"save_intermediate_smd_plans: {run_config.save_intermediate_smd_plans}")
