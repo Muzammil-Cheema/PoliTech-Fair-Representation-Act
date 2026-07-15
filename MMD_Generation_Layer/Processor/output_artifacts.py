@@ -44,6 +44,28 @@ def save_plan_assignments(
     success(f"Saved {len(ensemble)} plan assignments to {plans_dir}")
 
 
+def save_intermediate_smd_plans(
+    smd_ensemble: list[dict],
+    intermediate_smd_plans_dir: Path,
+    clear_existing: bool = True,
+) -> None:
+    """Save temporary SMD assignment JSON files used to build MMD plans."""
+    intermediate_smd_plans_dir.mkdir(parents=True, exist_ok=True)
+
+    if clear_existing:
+        for stale_plan in intermediate_smd_plans_dir.glob("smd_plan_*.json"):
+            stale_plan.unlink()
+
+    for smd_plan in smd_ensemble:
+        plan_id = smd_plan["results"]["plan_id"]
+        assignment_path = intermediate_smd_plans_dir / f"smd_plan_{plan_id}.json"
+        json_assignment = {str(key): int(value) for key, value in smd_plan["assignment"].items()}
+        with assignment_path.open("w") as file:
+            json.dump(json_assignment, file)
+
+    success(f"Saved {len(smd_ensemble)} intermediate SMD plans to {intermediate_smd_plans_dir}")
+
+
 def plot_seat_share_histogram(results_df: pd.DataFrame, output_path: Path) -> None:
     """Create and save a Democratic seat-share histogram."""
     output_path.parent.mkdir(parents=True, exist_ok=True)

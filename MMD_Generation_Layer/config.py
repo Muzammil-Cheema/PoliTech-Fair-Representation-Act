@@ -8,6 +8,7 @@ processor_dir = base_dir / "Processor"
 shape_path = base_dir / "Data" / "Shapefiles" / "NC" / "nc_2024_with_population.shp"
 output_dir = base_dir / "Outputs"
 plans_dir = output_dir / "Plan_Assignments"
+intermediate_smd_plans_dir = output_dir / "Intermediate_SMD_Plans"
 
 # Paths
 ensemble_csv_path = output_dir / "baseline_ensemble.csv"

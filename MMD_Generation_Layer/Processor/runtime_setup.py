@@ -50,6 +50,7 @@ class RunConfig:
     save_intermediate_smd_plans: bool
     output_dir: Path
     plans_dir: Path
+    intermediate_smd_plans_dir: Path
     ensemble_csv_path: Path
     seat_share_png_path: Path
 
@@ -72,6 +73,7 @@ def default_run_config() -> RunConfig:
         save_intermediate_smd_plans=project_config.SAVE_INTERMEDIATE_SMD_PLANS,
         output_dir=project_config.output_dir,
         plans_dir=project_config.plans_dir,
+        intermediate_smd_plans_dir=project_config.intermediate_smd_plans_dir,
         ensemble_csv_path=project_config.ensemble_csv_path,
         seat_share_png_path=project_config.seat_share_png_path,
     )
@@ -223,6 +225,7 @@ def apply_run_config(
         ),
         output_dir=base_config.output_dir,
         plans_dir=base_config.plans_dir,
+        intermediate_smd_plans_dir=base_config.intermediate_smd_plans_dir,
         ensemble_csv_path=base_config.ensemble_csv_path,
         seat_share_png_path=base_config.seat_share_png_path,
     )
