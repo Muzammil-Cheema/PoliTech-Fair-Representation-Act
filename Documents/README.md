@@ -21,6 +21,7 @@ Current implementation:
 - Uses shared MMD config in `MMD_Generation_Layer/config.py`.
 - Writes baseline plan summaries to `MMD_Generation_Layer/Outputs/baseline_ensemble.csv`.
 - Writes precinct-to-district assignment JSON files to `MMD_Generation_Layer/Outputs/Plan_Assignments/`.
+- Optionally writes the temporary SMD plans used to build MMD output to `MMD_Generation_Layer/Outputs/Intermediate_SMD_Plans/` when `save_intermediate_smd_plans` is set (debugging/inspection aid, off by default; see below).
 - Provides a Streamlit dashboard in `MMD_Generation_Layer/Client/baseline_dashboard.py`.
 
 Important limitation: the current MMD code generates equal-population district plans with one population target across districts. Real FRA multimember maps will need proportional population targets by seat count, for example a 5-seat MMD should target roughly five times the ideal single-seat population. That proportional MMD grouping work is still future work.
@@ -57,6 +58,7 @@ Important config rules:
 - In `MMD` mode, `seat_vector` must be a non-empty list of positive integers.
 - Legacy `mmd_seat_vector` is intentionally rejected with a clear error.
 - The loader is strict and raises errors on unknown keys.
+- `save_intermediate_smd_plans` (bool, default `false`) only changes behavior in `MMD` mode: when `true`, it writes the temporary SMD plans used to build MMD output as JSON to `MMD_Generation_Layer/Outputs/Intermediate_SMD_Plans/` (`smd_plan_<id>.json`, one per temporary SMD plan), without changing the normal MMD `Plan_Assignments` output. In `SMD` mode the flag is accepted but explicitly ignored: the run logs an info message noting it has no effect and does not create the directory.
 
 ## Best-Practice Structure
 
@@ -148,7 +150,7 @@ Current verified test state:
 
 ### Global constants
 
-- `MMD_Generation_Layer/config.py`: `base_dir`, `processor_dir`, `shape_path`, `output_dir`, `plans_dir`, `ensemble_csv_path`, `seat_share_png_path`, `NUM_PLANS`, `NUM_DISTRICTS`, `ID_COLUMN`, `GEOM_COLUMN`, `SEED`
+- `MMD_Generation_Layer/config.py`: `base_dir`, `processor_dir`, `shape_path`, `output_dir`, `plans_dir`, `intermediate_smd_plans_dir`, `ensemble_csv_path`, `seat_share_png_path`, `NUM_PLANS`, `NUM_DISTRICTS`, `ID_COLUMN`, `GEOM_COLUMN`, `SEED`, `SAVE_INTERMEDIATE_SMD_PLANS`
 - `Global_Utilities/json_io.py`: `PROJECT_ROOT`, `PIPE_DIR_NAME`
 - `Global_Utilities/logger.py`: `RESET`, `BLUE`, `GREEN`, `RED`, `YELLOW`
 - `Simulation_Layer/Core/config.py`: `MODE_SINGLE_SEAT_RCV`, `MODE_MULTI_SEAT_STV`, `VALID_MODES`, `DEFAULT_TRANSFER_VALUE`, `DEFAULT_ENCODING`
