@@ -41,7 +41,7 @@ But only when those edits are directly in service of keeping representational ge
 The repository currently has three main technical layers plus shared utilities:
 
 - `MMD_Generation_Layer/`: generates district-plan artifacts from geographic data
-- `Representational_Layer/`: generates candidates, elector units, scores, and ranked ballots
+- `Representational_Layer/`: generates candidates, elector units, scores, ranked ballots, and a simulation-ready orchestration workflow
 - `Simulation_Layer/`: consumes election JSON and counts elections under single-seat RCV and multi-seat STV rules
 - `Global_Utilities/` and `Pipe/`: provide shared JSON handoff and logging support across layers
 
@@ -115,6 +115,12 @@ This directory is the seed vocabulary for profile-based representation experimen
   - Defines:
     - `write_simulation_ready_output(test_name, ballots, candidates, metadata, project_root=None) -> Path`
   - Thin wrapper around the shared JSON helper that writes simulation-ready outputs into `Pipe/`.
+- `Representational_Layer/Src/Representational_Layer/orchestration.py`
+  - Defines:
+    - `RepresentationalWorkflowConfig`
+    - `RepresentationalWorkflowResult`
+    - `run_representational_workflow(state, config) -> RepresentationalWorkflowResult`
+  - Composes scoring, ranking, ballot generation, and simulation-ready export in one call.
 
 ### `Representational_Layer/Src/Representational_Layer/`
 
@@ -223,7 +229,7 @@ This thread should treat `Pipe/` as the simulation handoff zone, not as a catch-
   - `seat_count`
   - `mode`
   - `tie_break_order`
-  - optional `max_ranks_allowed` or `max_rankings_allowed`
+  - `max_ranks_allowed` is the canonical rank-cap field; `max_rankings_allowed` may also appear for compatibility with older readers
 - `tie_break_order` is an elimination priority in the simulation layer, not a "who stays" priority.
 - The representational layer should not blur into simulation counting logic.
 - The representational layer should not treat current MMD outputs as if they are already simulation-ready election JSON.

@@ -223,8 +223,15 @@ This keeps charts decoupled from core scoring/counting logic.
    - compare proposal quality, runtime, and plan diversity against the current approach
    - keep the resulting multimember plans usable for downstream research workflows
 4. Representational-layer API simplification:
-   - expose one orchestration entrypoint for: scoring -> ranking -> ballot objects -> simulation JSON export
-   - keep per-method behavior selectable (`deterministic_sort`, weighted, softmax) behind that single entrypoint
+   - expose one orchestration entrypoint for:
+     - scoring
+     - ranking
+     - ballot objects
+     - simulation JSON export
+   - keep multiple behaviors selectable behind that single API:
+     - `deterministic_sort`
+     - `weighted_without_replacement`
+     - `softmax_without_replacement`
 5. Vocabulary maturity:
    - continue expanding and versioning shared attribute specs in `Representational_Layer/Attributes/`
    - formalize weight presets and missing-value policies for reproducible experiments

@@ -7,6 +7,11 @@ from .input_contract import (
     load_experiment_contract,
     parse_experiment_contract,
 )
+from .orchestration import (
+    RepresentationalWorkflowConfig,
+    RepresentationalWorkflowResult,
+    run_representational_workflow,
+)
 from .models import (
     AttributeSpec,
     AttributeType,
@@ -49,10 +54,13 @@ __all__ = [
     "RankGroup",
     "RankingMethod",
     "RepresentationalExperimentState",
+    "RepresentationalWorkflowConfig",
+    "RepresentationalWorkflowResult",
     "ScoreStyle",
     "generate_ballot",
     "generate_weighted_ballot_ranking",
     "load_experiment_contract",
     "parse_experiment_contract",
+    "run_representational_workflow",
     "score_candidates_for_elector_unit",
 ]
