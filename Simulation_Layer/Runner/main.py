@@ -63,7 +63,16 @@ def run_single_seat_rcv(election: Election) -> Dict:
         if len(active) <= 2:
             max_votes = max(totals.get(candidate_id, 0.0) for candidate_id in active) if active else 0.0
             top = [candidate_id for candidate_id in active if totals.get(candidate_id, 0.0) == max_votes]
-            winner = tie_break(top, election.tie_break_order) if len(top) > 1 else top[0]
+            if len(top) > 1:
+                # tie_break_order is an elimination priority, not a survival priority
+                # (see Documents/AGENTS.md, Documents/README.md): it names who is
+                # weaker, never who wins. So resolve a final-round tie the same way
+                # every other tie is resolved -- find who it would eliminate -- and
+                # elect whichever tied candidate is left.
+                eliminated_in_tie = tie_break(top, election.tie_break_order)
+                winner = next(candidate_id for candidate_id in top if candidate_id != eliminated_in_tie)
+            else:
+                winner = top[0]
             add_winner(status, winner)
             rounds[-1]["action"] = {"type": "elect", "candidate": winner}
             break
