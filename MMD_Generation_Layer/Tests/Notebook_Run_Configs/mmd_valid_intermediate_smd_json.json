@@ -9,7 +9,7 @@
   "population_tolerance": 0.05,
   "mmd_smd_multiplier": 10,
   "mmd_plans_per_smd_plan": 5,
-  "max_mmd_attempts_per_smd_plan": 250,
+  "max_mmd_attempts_per_smd_plan": 25,
   "save_intermediate_smd_plans": true,
   "notes": "Small MMD scenario used to check intermediate SMD-plan JSON output.",
   "expected_behavior": "Should write smd_plan_*.json files to Outputs/Intermediate_SMD_Plans for every temporary SMD plan, log a success message naming the directory, and still produce the normal MMD Plan_Assignments outputs unchanged.",
