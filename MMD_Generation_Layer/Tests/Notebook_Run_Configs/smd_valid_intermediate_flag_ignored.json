@@ -1,0 +1,13 @@
+{
+  "generation_mode": "SMD",
+  "num_plans": 5,
+  "num_districts": 14,
+  "seed": 12345,
+  "shape_path": "../Data/Shapefiles/NC/nc_2024_with_population.shp",
+  "id_column": "UNIQUE_ID",
+  "geom_column": "the_geom",
+  "population_tolerance": 0.05,
+  "save_intermediate_smd_plans": true,
+  "notes": "SMD run with save_intermediate_smd_plans incorrectly left on.",
+  "expected_behavior": "Should complete normally and log an info message that save_intermediate_smd_plans is ignored in SMD mode; no Intermediate_SMD_Plans directory or files should be written."
+}

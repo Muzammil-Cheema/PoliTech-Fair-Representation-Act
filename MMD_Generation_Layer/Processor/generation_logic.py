@@ -17,6 +17,7 @@ from gerrychain.updaters import Tally
 
 from Global_Utilities import info, success, warn
 from MMD_Generation_Layer import config as project_config
+from MMD_Generation_Layer.Processor.output_artifacts import save_intermediate_smd_plans
 from MMD_Generation_Layer.Processor.runtime_setup import RunConfig
 
 
@@ -589,7 +590,16 @@ def generate_ensemble_for_run(graph: Graph, run_config: RunConfig) -> list[dict]
         population_tolerance=run_config.population_tolerance,
     )
 
+    if run_config.save_intermediate_smd_plans and mode_settings["mode"] == "SMD":
+        info(
+            "save_intermediate_smd_plans is ignored when generation_mode='SMD' "
+            "(it only applies to the temporary SMD plans built while generating MMD output)."
+        )
+
     if mode_settings["mode"] == "MMD":
+        if run_config.save_intermediate_smd_plans:
+            save_intermediate_smd_plans(smd_ensemble, run_config.intermediate_smd_plans_dir)
+
         ensemble = generate_mmd_ensemble_from_smd_ensemble(
             smd_ensemble=smd_ensemble,
             graph=graph,
