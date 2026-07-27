@@ -25,6 +25,9 @@ def load_and_build_graph(
     shape_path=project_config.shape_path,
     id_col=project_config.ID_COLUMN,
     geom_col=project_config.GEOM_COLUMN,
+    pop_col=project_config.POP_COLUMN,
+    dem_col=project_config.DEM_COLUMN,
+    rep_col=project_config.REP_COLUMN,
 ) -> tuple[Graph, gpd.GeoDataFrame]:
     """Load precinct geodata, validate columns, and build a GerryChain graph."""
     info("Loading shapefile for MMD generation.")
@@ -36,9 +39,9 @@ def load_and_build_graph(
 
     required_cols = {
         id_col,
-        "TOTPOP",
-        "G24PREDHAR",
-        "G24PRERTRU",
+        pop_col,
+        dem_col,
+        rep_col,
         gdf.geometry.name,
     }
     missing = required_cols - set(gdf.columns)
@@ -51,9 +54,9 @@ def load_and_build_graph(
     if not gdf[id_col].is_unique:
         raise ValueError(f"{id_col} is not unique. Cannot use as node ID.")
 
-    gdf["TOTPOP"] = pd.to_numeric(gdf["TOTPOP"], errors="coerce").fillna(0).astype(int)
-    gdf["G24PREDHAR"] = pd.to_numeric(gdf["G24PREDHAR"], errors="coerce").fillna(0).astype(int)
-    gdf["G24PRERTRU"] = pd.to_numeric(gdf["G24PRERTRU"], errors="coerce").fillna(0).astype(int)
+    gdf[pop_col] = pd.to_numeric(gdf[pop_col], errors="coerce").fillna(0).astype(int)
+    gdf[dem_col] = pd.to_numeric(gdf[dem_col], errors="coerce").fillna(0).astype(int)
+    gdf[rep_col] = pd.to_numeric(gdf[rep_col], errors="coerce").fillna(0).astype(int)
 
     invalid = ~gdf.geometry.is_valid
     if invalid.any():
@@ -67,9 +70,9 @@ def load_and_build_graph(
 
     for node in graph.nodes():
         row = gdf.loc[node]
-        graph.nodes[node]["population"] = row["TOTPOP"]
-        graph.nodes[node]["votes_dem"] = row["G24PREDHAR"]
-        graph.nodes[node]["votes_rep"] = row["G24PRERTRU"]
+        graph.nodes[node]["population"] = row[pop_col]
+        graph.nodes[node]["votes_dem"] = row[dem_col]
+        graph.nodes[node]["votes_rep"] = row[rep_col]
 
     degrees = [graph.degree(node) for node in graph.nodes()]
     isolated_count = sum(1 for degree in degrees if degree == 0)

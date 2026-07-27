@@ -38,6 +38,9 @@ def run_generation_pipeline(
         run_config.shape_path,
         run_config.id_column,
         run_config.geom_column,
+        run_config.pop_column,
+        run_config.dem_column,
+        run_config.rep_column,
     )
     ensemble = generate_ensemble_for_run(graph, run_config)
     save_output_artifacts(

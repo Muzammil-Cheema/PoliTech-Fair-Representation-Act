@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from Global_Utilities import info, success
+from MMD_Generation_Layer import config as project_config
 from MMD_Generation_Layer.Processor.runtime_setup import RunConfig
 
 
@@ -114,6 +115,9 @@ def generate_district_csvs(
     gdf: gpd.GeoDataFrame,
     plans_dir: Path,
     output_dir: Path,
+    pop_col: str = project_config.POP_COLUMN,
+    dem_col: str = project_config.DEM_COLUMN,
+    rep_col: str = project_config.REP_COLUMN,
 ) -> bool:
     """Generate district-level CSV files for all saved plan assignments."""
     plan_files = sorted(plans_dir.glob("plan_*.json"))
@@ -132,9 +136,9 @@ def generate_district_csvs(
             precinct_ids = [key for key, value in assignment.items() if value == district_id]
             district_precincts = gdf[gdf.index.isin(precinct_ids)]
 
-            dem_votes = district_precincts["G24PREDHAR"].sum()
-            rep_votes = district_precincts["G24PRERTRU"].sum()
-            population = district_precincts["TOTPOP"].sum()
+            dem_votes = district_precincts[dem_col].sum()
+            rep_votes = district_precincts[rep_col].sum()
+            population = district_precincts[pop_col].sum()
             winner = "Democrat" if dem_votes > rep_votes else "Republican"
 
             district_results.append(
@@ -174,7 +178,14 @@ def save_output_artifacts(
     if include_district_csvs:
         if gdf is None:
             raise ValueError("gdf is required when include_district_csvs=True")
-        generate_district_csvs(gdf, run_config.plans_dir, run_config.output_dir)
+        generate_district_csvs(
+            gdf,
+            run_config.plans_dir,
+            run_config.output_dir,
+            pop_col=run_config.pop_column,
+            dem_col=run_config.dem_column,
+            rep_col=run_config.rep_column,
+        )
 
     return results_df
 

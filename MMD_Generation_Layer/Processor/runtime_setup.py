@@ -19,6 +19,9 @@ RUN_CONFIG_ALLOWED_KEYS = {
     "shape_path",
     "id_column",
     "geom_column",
+    "pop_column",
+    "dem_column",
+    "rep_column",
     "population_tolerance",
     "seat_vector",
     "mmd_seat_vector",
@@ -42,6 +45,9 @@ class RunConfig:
     shape_path: Path
     id_column: str
     geom_column: str
+    pop_column: str
+    dem_column: str
+    rep_column: str
     seat_vector: tuple[int, ...]
     mmd_smd_multiplier: int
     mmd_plans_per_smd_plan: int
@@ -65,6 +71,9 @@ def default_run_config() -> RunConfig:
         shape_path=project_config.shape_path,
         id_column=project_config.ID_COLUMN,
         geom_column=project_config.GEOM_COLUMN,
+        pop_column=project_config.POP_COLUMN,
+        dem_column=project_config.DEM_COLUMN,
+        rep_column=project_config.REP_COLUMN,
         seat_vector=project_config.SEAT_VECTOR,
         mmd_smd_multiplier=project_config.MMD_SMD_MULTIPLIER,
         mmd_plans_per_smd_plan=project_config.MMD_PLANS_PER_SMD_PLAN,
@@ -205,6 +214,9 @@ def apply_run_config(
         shape_path=resolve_runtime_path(config.get("shape_path", base_config.shape_path)),
         id_column=str(config.get("id_column", base_config.id_column)),
         geom_column=str(config.get("geom_column", base_config.geom_column)),
+        pop_column=str(config.get("pop_column", base_config.pop_column)),
+        dem_column=str(config.get("dem_column", base_config.dem_column)),
+        rep_column=str(config.get("rep_column", base_config.rep_column)),
         seat_vector=seat_vector,
         mmd_smd_multiplier=int(config.get("mmd_smd_multiplier", base_config.mmd_smd_multiplier)),
         mmd_plans_per_smd_plan=int(
