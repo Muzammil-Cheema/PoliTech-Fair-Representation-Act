@@ -3,9 +3,68 @@ from __future__ import annotations
 import math
 from typing import Dict, Optional
 
-from Simulation_Layer.Core.models import Ballot, Candidate
 from Global_Utilities.logger import error
-from Simulation_Layer.Helpers.edge_cases import highest_ranked_active, is_undervote
+
+from .models import Ballot, Candidate, Ranking
+
+
+def is_undervote(ballot: Ballot) -> bool:
+    """Return whether a ballot is an undervote (contains no rankings).
+
+    Args:
+        ballot: Ballot to evaluate.
+
+    Returns:
+        True when the ballot has no rankings, else False.
+    """
+    return len(ballot.rankings) == 0
+
+
+def sorted_rankings(ballot: Ballot) -> list[Ranking]:
+    """Return ballot rankings ordered by ascending rank number.
+
+    Args:
+        ballot: Ballot containing rank groups.
+
+    Returns:
+        A new list of ranking groups sorted by ``rank``.
+    """
+    return sorted(ballot.rankings, key=lambda ranking: ranking.rank)
+
+
+def highest_ranked_active(
+    ballot: Ballot,
+    active_candidate_ids: set[str],
+) -> Optional[str]:
+    """Resolve a ballot to its highest-ranked unambiguous active candidate.
+
+    Undervotes have no allocation. Skipped and repeated ranks remain usable.
+    A same-rank group containing multiple active candidates is ambiguous and has
+    no allocation; the counting flow then marks that ballot persistently inactive.
+
+    Args:
+        ballot: Ballot to resolve.
+        active_candidate_ids: Candidate IDs currently active in the round.
+
+    Returns:
+        Candidate ID when an unambiguous active choice is found, otherwise None.
+    """
+    if is_undervote(ballot):
+        return None
+
+    for ranking in sorted_rankings(ballot):
+        active_in_rank = [
+            candidate_id
+            for candidate_id in ranking.candidate_ids
+            if candidate_id in active_candidate_ids
+        ]
+        if not active_in_rank:
+            continue
+        if len(active_in_rank) == 1:
+            return active_in_rank[0]
+        return None
+
+    return None
 
 
 def initial_candidate_status(candidates: list[Candidate]) -> Dict[str, str]:

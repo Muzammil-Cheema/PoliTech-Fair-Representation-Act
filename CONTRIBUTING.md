@@ -39,6 +39,10 @@ Use:
 - `Global_Utilities/json_io.py` for shared simulation JSON contracts
 - `Global_Utilities/logger.py` for runtime logging helpers
 - `Pipe/` as the shared handoff boundary for simulation-ready election JSON
+- `Simulation_Layer/Core/utils.py` for simulation counting and ballot-resolution helpers
+
+Do not reintroduce a separate simulation helper package when an existing Core
+model or utility module owns the behavior.
 
 ### Keep changes focused
 

@@ -11,7 +11,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from Simulation_Layer.Core.config import MODE_SINGLE_SEAT_RCV
 from Simulation_Layer.Core.models import Election
-from Simulation_Layer.Helpers.utils import (
+from Simulation_Layer.Core.utils import (
     active_candidates,
     add_winner,
     apply_simultaneous_surplus_transfer_values,

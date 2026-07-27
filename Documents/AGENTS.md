@@ -438,33 +438,11 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `Candidate`, `Ranking`, `Ballot`, `Election`
   - `Ballot.state` tracks persistent ballot activity (`active` or `inactive`) during a tabulation run.
   - `Election.__post_init__` enforces core validation constraints.
+- `Simulation_Layer/Core/utils.py`
+  - Consolidated ballot-resolution, candidate-state, counting, transfer, and round-log helpers formerly located in `Simulation_Layer/Helpers/`.
+  - Imports and re-exports: `is_undervote`, `sorted_rankings`, `highest_ranked_active`, `initial_candidate_status`, `active_candidates`, `elected_candidates`, `tie_break`, `add_winner`, `eliminate_candidate`, `compute_threshold`, `truncate_4`, `append_round`, `count_votes_single_round`, `apply_threshold_to_elected`, `build_surplus_fractions`, and `apply_simultaneous_surplus_transfer_values`.
 - `Simulation_Layer/Core/__init__.py`
   - Re-exports simulation config constants and core model classes.
-- `Simulation_Layer/Helpers/edge_cases.py`
-  - `is_undervote(ballot)`
-  - `sorted_rankings(ballot)`
-  - `highest_ranked_active(ballot, active_candidate_ids)`
-  - `highest_ranked_active(...)` only resolves the current-round assignment; persistent inactivity is applied in counting utilities.
-- `Simulation_Layer/Helpers/__init__.py`
-  - Re-exports edge-case helpers and count utility helpers.
-- `Simulation_Layer/Helpers/utils.py`
-  - Candidate/state helpers:
-    - `initial_candidate_status(candidates)`
-    - `active_candidates(status)`
-    - `elected_candidates(status)`
-    - `tie_break(tied_ids, tie_break_order)`
-    - `add_winner(status, candidate_id)`
-    - `eliminate_candidate(status, candidate_id)`
-  - Math/round helpers:
-    - `compute_threshold(first_round_total, seat_count)`
-    - `truncate_4(value)`
-    - `append_round(rounds, round_number, threshold, status, totals, action, include_threshold, ballot_allocations=None)`
-    - `count_votes_single_round(ballots, status, use_transfer_values, transfer_values_by_ballot_id=None) -> tuple[totals, ballot_allocations]`
-      - Ballots that are already `inactive` are skipped in all future rounds.
-      - Ballots that cannot resolve to a candidate in a round are marked `inactive` and remain inactive for the rest of the run.
-    - `apply_threshold_to_elected(totals, status, threshold)`
-    - `build_surplus_fractions(elected_candidate_ids, totals, threshold)`
-    - `apply_simultaneous_surplus_transfer_values(ballots, round_ballot_allocations, surplus_fractions, transfer_values_by_ballot_id) -> dict[ballot_id, transfer_value]`
 - `Simulation_Layer/Runner/main.py`
   - Global constants:
     - `PROJECT_ROOT`
@@ -562,7 +540,7 @@ This file must be updated after **every LLM-authored code change** so the docume
 - Prefer `Representational_Layer.models`, `Representational_Layer.generation`, and `Representational_Layer.scoring` for external representational imports.
 - Prefer `Representational_Layer.load_experiment_contract(...)` for user-authored representational JSON input contracts.
 - Keep implementation edits in `Representational_Layer/Src/Representational_Layer/` unless the task is specifically about compatibility wrappers.
-- Prefer `Simulation_Layer.Core.models`, `Simulation_Layer.Helpers.utils`, and `Simulation_Layer.Runner.main` for simulation imports.
+- Prefer `Simulation_Layer.Core.models`, `Simulation_Layer.Core.utils`, and `Simulation_Layer.Runner.main` for simulation imports.
 - Avoid adding new top-level import shims unless there is a clear compatibility reason and `pyproject.toml` is updated.
 
 ## Complete Model/Class Inventory
