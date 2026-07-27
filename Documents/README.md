@@ -63,7 +63,7 @@ Important config rules:
 ## Best-Practice Structure
 
 - Keep representational experiments in `Representational_Layer/Src/Representational_Layer/`.
-- Keep simulation counting logic in `Simulation_Layer/`.
+- Keep simulation models, counting utilities, and tabulation configuration in `Simulation_Layer/Core/`; use `Simulation_Layer/Core/utils.py` for simulation helper imports.
 - Keep district generation and map/dashboard logic in `MMD_Generation_Layer/`.
 - Use `Global_Utilities/json_io.py` for JSON contracts between layers.
 - Use `Global_Utilities/logger.py` wrappers (`info/warn/success/error`) for runtime messaging.
@@ -78,6 +78,7 @@ Important config rules:
   - Representational models in `Representational_Layer/Src/Representational_Layer/models.py`
   - Top-level representational compatibility imports in `Representational_Layer/models.py`, `Representational_Layer/generation.py`, and `Representational_Layer/scoring.py`
   - Simulation models in `Simulation_Layer/Core/models.py`
+  - Simulation counting and ballot-resolution utilities in `Simulation_Layer/Core/utils.py`
 - MMD configuration and generation:
   - `MMD_Generation_Layer/config.py`
   - `MMD_Generation_Layer/Processor/main.ipynb`

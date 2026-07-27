@@ -159,7 +159,6 @@ packages = [
   "Attributes",
   "Simulation_Layer",
   "Core",
-  "Helpers",
   "Runner",
   "Global_Utilities",
   "MMD_Generation_Layer",
@@ -171,7 +170,6 @@ Representational_Layer = "Representational_Layer"
 Attributes = "Representational_Layer/Attributes"
 Simulation_Layer = "Simulation_Layer"
 Core = "Simulation_Layer/Core"
-Helpers = "Simulation_Layer/Helpers"
 Runner = "Simulation_Layer/Runner"
 Global_Utilities = "Global_Utilities"
 MMD_Generation_Layer = "MMD_Generation_Layer"

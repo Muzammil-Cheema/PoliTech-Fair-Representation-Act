@@ -9,8 +9,7 @@ This thread owns the **Simulation Layer** for the Fair Representation Act (FRA) 
 
 ## Current Project Layout (relevant areas)
 - `Simulation_Layer/`
-  - `Core/` (models/config)
-  - `Helpers/` (edge cases + counting/transfer helpers)
+  - `Core/` (models/config/counting utilities)
   - `Runner/` (main simulation driver)
   - `Tests/` (acceptance/e2e coverage)
 - `Representational_Layer/` (ballot/candidate generation + tests)
@@ -22,8 +21,11 @@ This thread owns the **Simulation Layer** for the Fair Representation Act (FRA) 
 ### 1) Simulation modularization
 The former monolithic simulation logic was split into:
 - `Simulation_Layer/Core/*`
-- `Simulation_Layer/Helpers/*`
 - `Simulation_Layer/Runner/main.py`
+
+`Simulation_Layer/Core/utils.py` consolidates ballot edge-case, counting,
+transfer, candidate-state, and round-log helpers; the prior `Helpers/` package
+was removed.
 
 ### 2) Shared JSON IO boundary
 Both layers now read/write simulation JSON through `Global_Utilities/json_io.py`.
