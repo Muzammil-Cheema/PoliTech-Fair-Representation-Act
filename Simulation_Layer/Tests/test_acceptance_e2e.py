@@ -237,15 +237,16 @@ def test_ballot_becomes_inactive_all_ranked_candidates_inactive(
     """Verify ballots with no active ranked candidates become inactive."""
     result = run_case("Acceptance_Test_Cases/08_ballot_becomes_inactive_all_ranked_candidates_inactive.json", monkeypatch, capsys)
 
-    assert result["winners"] == ["A"]
+    assert result["winners"] == ["B"]
     assert result["rounds"][0]["action"] == {"type": "eliminate", "candidate": "C"}
     assert result["rounds"][1]["vote_totals"] == {"A": 2.0, "B": 2.0, "C": 0.0}
-    assert result["rounds"][1]["action"] == {"type": "elect", "candidate": "A"}
+    assert result["rounds"][1]["action"] == {"type": "elect", "candidate": "B"}
     log_test_success(capsys, "test_ballot_becomes_inactive_all_ranked_candidates_inactive passed.")
 
 
 # Verifies skipped ranks are preserved: after A is eliminated, the ballot with a
-# missing rank 2 still transfers from rank 1 to rank 3 and keeps C competitive.
+# missing rank 2 still transfers from rank 1 to rank 3, tying B and C, and the
+# tie-break order (which names B as the weaker of the two) lets C win.
 def test_skipped_ranking_remains_valid(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -253,7 +254,7 @@ def test_skipped_ranking_remains_valid(
     """Verify skipped ranks preserve later usable rankings for transfer."""
     result = run_case("Acceptance_Test_Cases/09_skipped_ranking_remains_valid.json", monkeypatch, capsys)
 
-    assert result["winners"] == ["B"]
+    assert result["winners"] == ["C"]
     assert result["rounds"][0]["action"] == {"type": "eliminate", "candidate": "A"}
     assert result["rounds"][1]["vote_totals"] == {"A": 0.0, "B": 2.0, "C": 2.0}
     log_test_success(capsys, "test_skipped_ranking_remains_valid passed.")
@@ -268,7 +269,7 @@ def test_repeated_candidate_remains_valid(
     """Verify repeated candidate rankings do not invalidate the ballot."""
     result = run_case("Acceptance_Test_Cases/10_repeated_candidate_remains_valid.json", monkeypatch, capsys)
 
-    assert result["winners"] == ["B"]
+    assert result["winners"] == ["C"]
     assert result["rounds"][0]["action"] == {"type": "eliminate", "candidate": "A"}
     assert result["rounds"][1]["vote_totals"] == {"A": 0.0, "B": 2.0, "C": 2.0}
     log_test_success(capsys, "test_repeated_candidate_remains_valid passed.")
@@ -306,9 +307,9 @@ def test_tie_break_rule_deterministic(
     """Verify tie-break order controls tied elimination and final election."""
     result = run_case("Acceptance_Test_Cases/12_tie_break_rule_deterministic.json", monkeypatch, capsys)
 
-    assert result["winners"] == ["B"]
+    assert result["winners"] == ["C"]
     assert result["rounds"][0]["action"] == {"type": "eliminate", "candidate": "A"}
-    assert result["rounds"][1]["action"] == {"type": "elect", "candidate": "B"}
+    assert result["rounds"][1]["action"] == {"type": "elect", "candidate": "C"}
     log_test_success(capsys, "test_tie_break_rule_deterministic passed.")
 
 

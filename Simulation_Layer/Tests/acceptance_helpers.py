@@ -237,7 +237,13 @@ def expected_single_seat_winners(payload: Mapping[str, Any]) -> list[str]:
                 for candidate_id in active
                 if totals.get(candidate_id, 0.0) == max_votes
             ]
-            winner = fixture_tie_break(top, tie_break_order) if len(top) > 1 else top[0]
+            if len(top) > 1:
+                eliminated_in_tie = fixture_tie_break(top, tie_break_order)
+                winner = next(
+                    candidate_id for candidate_id in top if candidate_id != eliminated_in_tie
+                )
+            else:
+                winner = top[0]
             status[winner] = "elected"
             break
 
