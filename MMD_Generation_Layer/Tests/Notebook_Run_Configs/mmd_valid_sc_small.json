@@ -1,0 +1,16 @@
+{
+  "generation_mode": "MMD",
+  "num_plans": 6,
+  "num_districts": 5,
+  "seed": 33445,
+  "shape_path": "../Data/Shapefiles/SC/sc_2024_with_population.shp",
+  "id_column": "UNIQUE_ID",
+  "geom_column": "geometry",
+  "population_tolerance": 0.05,
+  "mmd_smd_multiplier": 5,
+  "mmd_plans_per_smd_plan": 2,
+  "max_mmd_attempts_per_smd_plan": 150,
+  "notes": "Small quick-run MMD scenario for South Carolina using a compact seat vector.",
+  "expected_behavior": "Should attempt 2 MMD plans per temporary SMD plan and save a small valid South Carolina MMD ensemble.",
+  "seat_vector": [3, 2]
+}
