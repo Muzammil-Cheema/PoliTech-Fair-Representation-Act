@@ -1,12 +1,12 @@
 {
   "generation_mode": "SMD",
   "num_plans": 5,
-  "num_districts": 4,
+  "num_districts": 7,
   "seed": 11223,
   "shape_path": "../Data/Shapefiles/SC/sc_2024_with_population.shp",
   "id_column": "UNIQUE_ID",
   "geom_column": "geometry",
   "population_tolerance": 0.05,
   "notes": "Small quick-run SMD scenario for South Carolina, for debugging and smoke checks.",
-  "expected_behavior": "Should complete quickly and save a 4-district South Carolina SMD ensemble."
+  "expected_behavior": "Should complete quickly and save a 7-district South Carolina SMD ensemble."
 }
