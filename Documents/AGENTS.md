@@ -460,7 +460,7 @@ This file must be updated after **every LLM-authored code change** so the docume
   - Keeps raw `run_cli()` output captured internally and emits concise per-test success/warning lines through shared logging wrappers.
   - Recursively discovers runnable JSON files under `Pipe/`, runs each through the CLI path, and compares printed winners against fixture-derived expected winners.
   - Logs success when actual winners match expected winners and logs a warning with actual vs. expected winners before failing when they differ.
-  - Replays all 14 canonical acceptance fixtures 5000 times each through `run_cli()` and logs every expected-vs-actual winner mismatch.
+  - Replays all 18 canonical acceptance fixtures 5000 times each through `run_cli()` and logs every expected-vs-actual winner mismatch.
   - Includes a regression test that invalid CLI input paths emit the shared JSON read error plus a CLI-context warning before exiting.
   - Pytest-local helpers:
     - `run_case(cli_path, monkeypatch, capsys) -> dict`
