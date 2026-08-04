@@ -23,6 +23,23 @@ def save_ensemble_summary(ensemble: list[dict], csv_path: Path) -> pd.DataFrame:
     return results_df
 
 
+def save_run_metadata(run_config: RunConfig) -> Path:
+    """Persist the resolved run config fields the dashboard needs to read back."""
+    run_config.output_dir.mkdir(parents=True, exist_ok=True)
+    metadata = {
+        "shape_path": str(run_config.shape_path),
+        "num_districts": run_config.num_districts,
+        "num_plans": run_config.num_plans,
+        "id_column": run_config.id_column,
+        "geom_column": run_config.geom_column,
+    }
+    metadata_path = run_config.output_dir / "run_metadata.json"
+    with metadata_path.open("w") as file:
+        json.dump(metadata, file, indent=2)
+    success(f"Saved run metadata: {metadata_path}")
+    return metadata_path
+
+
 def save_plan_assignments(
     ensemble: list[dict],
     plans_dir: Path,
@@ -171,6 +188,7 @@ def save_output_artifacts(
     run_config.output_dir.mkdir(parents=True, exist_ok=True)
     save_plan_assignments(ensemble, run_config.plans_dir)
     results_df = save_ensemble_summary(ensemble, run_config.ensemble_csv_path)
+    save_run_metadata(run_config)
 
     if include_plots:
         plot_seat_share_histogram(results_df, run_config.seat_share_png_path)
