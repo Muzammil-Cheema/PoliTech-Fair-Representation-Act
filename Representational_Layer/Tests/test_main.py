@@ -2,6 +2,7 @@ import json
 import pytest
 from pathlib import Path
 
+from Representational_Layer import load_experiment_contract
 from Representational_Layer.main import run_representational_workflow
 from Global_Utilities import read_simulation_ready_json
 
@@ -11,6 +12,15 @@ def test_run_representational_workflow_valid_contract(tmp_path: Path):
     fixture_dir = Path(__file__).parent / "Input_Contracts"
     contract_path = fixture_dir / "valid_starter_and_custom_contract.json"
     output_path = tmp_path / "valid_output.json"
+
+    state = load_experiment_contract(contract_path)
+    assert len(state.ballot_generation_runs) == 1
+    selected_run = state.ballot_generation_runs[0]
+    expected_ballot_count = sum(
+        unit.size
+        for unit in state.elector_units
+        if unit.election_id == selected_run.election_id
+    )
 
     # Run workflow
     result = run_representational_workflow(
@@ -29,9 +39,9 @@ def test_run_representational_workflow_valid_contract(tmp_path: Path):
     assert seat_count == 3
     assert mode == "multi_seat_stv"
     
-    # Ballots generated should match ElectorUnit.size.
-    # Let's check how many ballots were generated.
-    assert len(ballots) > 0
+    # Default run selection uses the sole generation run in this fixture.
+    # The ballot population must equal the summed elector-unit size for that run's election.
+    assert len(ballots) == expected_ballot_count
     
 
 def test_run_representational_workflow_ambiguous_runs(tmp_path: Path):
