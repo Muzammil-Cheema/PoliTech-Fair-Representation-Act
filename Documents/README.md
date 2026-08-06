@@ -26,6 +26,28 @@ Current implementation:
 
 Data note: current MMD runs pair 2020 Census population figures with 2024 voting data. Keep that year mismatch in mind when interpreting outputs or comparing them to fully time-aligned analyses.
 
+### MMD population and geometry construction
+
+GerryChain needs every graph unit to have a geometry, adjacency relationships, total population, and election results. Those fields are not generally available together from one government source at one shared geographic level, so the population and election datasets must be spatially reconciled.
+
+The current approach uses election precincts as the graph units:
+
+- Preserve the precinct geometries and reported 2024 precinct vote totals from the election shapefile.
+- Read official 2020 Census block geometries and `POP20` population totals from TIGER/Line files.
+- Reconstruct each precinct's `TOTPOP` by assigning Census block population to the precincts that contain or overlap the block.
+- Use either the fast point method, which assigns the entire block population to the precinct containing its Census internal point, or the slower area-weighted method, which distributes population according to the fraction of block area overlapping each precinct. The area-weighted method is preferred for retained research data.
+
+This can be summarized as **reported precinct votes plus reconstructed precinct population**. It preserves the election reporting units and avoids expanding the GerryChain graph to hundreds of thousands of Census blocks. Statewide population is preserved very closely, apart from boundary mismatches and rounding, but individual precinct values remain estimates because Census data do not identify where people live within each block. The method also combines 2020 population with 2024 votes, so it does not capture population movement after the Census.
+
+A reverse approach could instead use Census blocks as the graph units:
+
+- Preserve the official Census block geometries and exact block-level `POP20` totals.
+- Overlay election precincts onto the blocks.
+- Reconstruct block-level Democratic and Republican vote totals by distributing each precinct's reported votes among its overlapping blocks, using area or a population-related weighting variable.
+- Build district plans directly from the much larger block graph and aggregate the reconstructed block votes into each generated district.
+
+The reverse approach can be summarized as **reported block population plus reconstructed block votes**. It gives the district generator finer population geometry, but it does not make the combined dataset exact: ballots are reported for whole precincts, not Census blocks, so their locations within a precinct are unknown. It would also substantially increase graph-building, memory, and ensemble-generation costs. Unless population precision becomes more important than vote preservation and runtime, the current precinct-based method is the practical default for exploratory and unpublished academic research. Comparisons between the point and area-weighted methods, statewide-total checks, and sensitivity tests should be used before drawing strong conclusions from individual precincts or close district outcomes.
+
 Important limitation: the current MMD code generates equal-population district plans with one population target across districts. Real FRA multimember maps will need proportional population targets by seat count, for example a 5-seat MMD should target roughly five times the ideal single-seat population. That proportional MMD grouping work is still future work.
 
 ### MMD notebook run configs
