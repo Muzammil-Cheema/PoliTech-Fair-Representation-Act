@@ -1,0 +1,12 @@
+{
+  "generation_mode": "SMD",
+  "num_plans": 5,
+  "num_districts": 9,
+  "seed": 55667,
+  "shape_path": "../Data/Shapefiles/TN/tn_2024_with_population.shp",
+  "id_column": "UNIQUE_ID",
+  "geom_column": "geometry",
+  "population_tolerance": 0.05,
+  "notes": "Small quick-run SMD scenario for Tennessee, for debugging and smoke checks.",
+  "expected_behavior": "Should complete quickly and save a 9-district Tennessee SMD ensemble."
+}

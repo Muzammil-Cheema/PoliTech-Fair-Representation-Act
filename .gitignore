@@ -17,3 +17,4 @@ dataSources.local.xml
 
 # MMD generated artifacts
 MMD_Generation_Layer/Outputs/
+MMD_Generation_Layer/Data/Census_Blocks

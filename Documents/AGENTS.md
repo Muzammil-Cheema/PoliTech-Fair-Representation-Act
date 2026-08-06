@@ -147,6 +147,7 @@ This file must be updated after **every LLM-authored code change** so the docume
   - Uses equal-population ReCom for baseline temporary SMD generation.
   - Includes notebook and script workflows that convert temporary SMD plans into genuine FRA-style multimember district plans using a seat vector and seat-weighted population targets.
   - Produces usable FRA multimember district artifacts, but still needs better proposal strategies and efficiency work before large-scale use.
+  - Current runs pair 2020 Census population figures with 2024 voting data, so downstream analysis should keep that temporal mismatch in mind.
 - `MMD_Generation_Layer/config.py`
   - Directories and paths:
     - `base_dir`
