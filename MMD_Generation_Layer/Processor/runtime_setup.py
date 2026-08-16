@@ -61,6 +61,56 @@ class RunConfig:
     seat_share_png_path: Path
 
 
+@dataclass(frozen=True)
+class DashboardRunMetadata:
+    """Resolved metadata the dashboard needs to render a completed run."""
+
+    shape_path: Path
+    num_districts: int
+    num_plans: int
+    id_column: str
+    geom_column: str
+    output_dir: Path
+    plans_dir: Path
+    ensemble_csv_path: Path
+
+
+def load_dashboard_run_metadata(output_dir: Path | None = None) -> DashboardRunMetadata:
+    """Load dashboard metadata from run_metadata.json, falling back to config.py defaults."""
+    output_dir = output_dir or project_config.output_dir
+    metadata_path = output_dir / "run_metadata.json"
+    plans_dir = output_dir / project_config.plans_dir.name
+    ensemble_csv_path = output_dir / project_config.ensemble_csv_path.name
+
+    if metadata_path.exists():
+        with metadata_path.open("r") as file:
+            metadata = json.load(file)
+
+        info(f"Loaded dashboard run metadata from {metadata_path}")
+        return DashboardRunMetadata(
+            shape_path=Path(metadata["shape_path"]),
+            num_districts=int(metadata["num_districts"]),
+            num_plans=int(metadata["num_plans"]),
+            id_column=str(metadata["id_column"]),
+            geom_column=str(metadata["geom_column"]),
+            output_dir=output_dir,
+            plans_dir=plans_dir,
+            ensemble_csv_path=ensemble_csv_path,
+        )
+
+    warn(f"No run metadata found at {metadata_path}; falling back to config.py defaults (NC).")
+    return DashboardRunMetadata(
+        shape_path=project_config.shape_path,
+        num_districts=project_config.NUM_DISTRICTS,
+        num_plans=project_config.NUM_PLANS,
+        id_column=project_config.ID_COLUMN,
+        geom_column=project_config.GEOM_COLUMN,
+        output_dir=output_dir,
+        plans_dir=plans_dir,
+        ensemble_csv_path=ensemble_csv_path,
+    )
+
+
 def default_run_config() -> RunConfig:
     """Build the default script config from `MMD_Generation_Layer.config`."""
     return RunConfig(

@@ -620,4 +620,3 @@ def generate_ensemble_for_run(graph: Graph, run_config: RunConfig) -> list[dict]
         return ensemble
 
     return smd_ensemble
-

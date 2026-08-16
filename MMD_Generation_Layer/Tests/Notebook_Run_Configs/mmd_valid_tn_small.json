@@ -1,16 +1,16 @@
 {
   "generation_mode": "MMD",
-  "num_plans": 6,
+  "num_plans": 20,
   "num_districts": 9,
   "seed": 77889,
   "shape_path": "../Data/Shapefiles/TN/tn_2024_with_population.shp",
   "id_column": "UNIQUE_ID",
   "geom_column": "geometry",
   "population_tolerance": 0.05,
-  "mmd_smd_multiplier": 5,
-  "mmd_plans_per_smd_plan": 2,
-  "max_mmd_attempts_per_smd_plan": 15,
+  "mmd_smd_multiplier": 10,
+  "mmd_plans_per_smd_plan": 5,
+  "max_mmd_attempts_per_smd_plan": 20,
   "notes": "Small quick-run MMD scenario for Tennessee using a compact seat vector.",
-  "expected_behavior": "Should attempt 2 MMD plans per temporary SMD plan and save a small valid Tennessee MMD ensemble.",
+  "expected_behavior": "Should generate 2 temporary SMD plans, attempt up to 5 MMD plans from each, and save up to 10 valid Tennessee MMD plans.",
   "seat_vector": [3, 3, 3]
 }
