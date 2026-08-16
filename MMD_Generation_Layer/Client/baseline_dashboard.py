@@ -9,12 +9,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
 
-from MMD_Generation_Layer.config import (
-    output_dir,
-    plans_dir,
-    ensemble_csv_path,
-)
-from MMD_Generation_Layer.Processor.runtime_setup import load_dashboard_config
+from MMD_Generation_Layer.Processor.runtime_setup import load_dashboard_run_metadata
 
 
 # Page config
@@ -182,31 +177,31 @@ def plot_baseline_histogram(
 
 def main():
     """Main dashboard application."""
-    dashboard_config = load_dashboard_config()
+    dashboard_metadata = load_dashboard_run_metadata()
 
     st.title("🗺️ Baseline Ensemble Dashboard")
     st.markdown("### Step 1: Traditional Single-Member Districts")
     st.markdown("---")
 
-    if not ensemble_csv_path.exists():
-        st.error(f"❌ Results not found at: {ensemble_csv_path}")
+    if not dashboard_metadata.ensemble_csv_path.exists():
+        st.error(f"❌ Results not found at: {dashboard_metadata.ensemble_csv_path}")
         st.info("Please run the baseline generation pipeline first.")
         st.stop()
 
-    if not dashboard_config.shape_path.exists():
-        st.error(f"❌ Shapefile not found at: {dashboard_config.shape_path}")
+    if not dashboard_metadata.shape_path.exists():
+        st.error(f"❌ Shapefile not found at: {dashboard_metadata.shape_path}")
         st.stop()
 
-    if not plans_dir.exists():
-        st.error(f"❌ Plan assignments directory not found at: {plans_dir}")
+    if not dashboard_metadata.plans_dir.exists():
+        st.error(f"❌ Plan assignments directory not found at: {dashboard_metadata.plans_dir}")
         st.stop()
 
     with st.spinner("Loading data..."):
-        results_df = load_ensemble_results(str(ensemble_csv_path))
+        results_df = load_ensemble_results(str(dashboard_metadata.ensemble_csv_path))
         gdf = load_shapefile(
-            str(dashboard_config.shape_path),
-            dashboard_config.id_column,
-            dashboard_config.geom_column,
+            str(dashboard_metadata.shape_path),
+            dashboard_metadata.id_column,
+            dashboard_metadata.geom_column,
         )
 
     st.success(f"✅ Loaded {len(results_df)} plans with {len(gdf)} precincts")
@@ -218,7 +213,7 @@ def main():
         format_func=lambda x: f"Plan {x}",
     )
 
-    assignment = load_plan_assignment(int(plan_id), plans_dir)
+    assignment = load_plan_assignment(int(plan_id), dashboard_metadata.plans_dir)
     if assignment is None:
         st.error(f"❌ Could not load assignment for Plan {plan_id}")
         st.stop()
@@ -228,10 +223,10 @@ def main():
     st.sidebar.markdown("---")
     st.sidebar.subheader(f"Plan {plan_id} Results")
     st.sidebar.metric(
-        "Democratic Seats", f"{selected_plan['dem_seats']}/{dashboard_config.num_districts}"
+        "Democratic Seats", f"{selected_plan['dem_seats']}/{dashboard_metadata.num_districts}"
     )
     st.sidebar.metric(
-        "Republican Seats", f"{selected_plan['rep_seats']}/{dashboard_config.num_districts}"
+        "Republican Seats", f"{selected_plan['rep_seats']}/{dashboard_metadata.num_districts}"
     )
     st.sidebar.metric("Dem Seat Share", f"{selected_plan['dem_seat_share']:.1%}")
 
@@ -244,8 +239,8 @@ def main():
                 gdf,
                 assignment,
                 int(plan_id),
-                dashboard_config.id_column,
-                dashboard_config.num_districts,
+                dashboard_metadata.id_column,
+                dashboard_metadata.num_districts,
             )
             st.pyplot(fig_map)
             plt.close(fig_map)
@@ -273,7 +268,7 @@ def main():
             "Value": [
                 selected_plan["dem_seats"],
                 selected_plan["rep_seats"],
-                dashboard_config.num_districts,
+                dashboard_metadata.num_districts,
                 f"{selected_plan['dem_seat_share']:.3f}",
             ],
         }
@@ -283,7 +278,10 @@ def main():
     st.subheader(f"📊 Comparative Analysis: All {len(results_df)} Plans")
 
     fig_hist, hist_output_path = plot_baseline_histogram(
-        results_df, output_dir, dashboard_config.num_districts, dashboard_config.num_plans
+        results_df,
+        dashboard_metadata.output_dir,
+        dashboard_metadata.num_districts,
+        dashboard_metadata.num_plans,
     )
     st.pyplot(fig_hist)
     plt.close(fig_hist)
