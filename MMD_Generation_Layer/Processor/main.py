@@ -57,7 +57,14 @@ def run_generation_pipeline(
 def run_streamlit_dashboard(extra_args: Sequence[str] | None = None) -> int:
     """Run the Streamlit dashboard from the Client layer."""
     dashboard_path = project_config.base_dir / "Client" / "baseline_dashboard.py"
-    command = ["streamlit", "run", str(dashboard_path), *(extra_args or [])]
+    command = [
+        sys.executable,
+        "-m",
+        "streamlit",
+        "run",
+        str(dashboard_path),
+        *(extra_args or []),
+    ]
     info(f"Starting Streamlit dashboard: {' '.join(command)}")
     return subprocess.run(command, check=False).returncode
 

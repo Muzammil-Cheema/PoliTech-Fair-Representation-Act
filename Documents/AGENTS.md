@@ -267,6 +267,7 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `save_output_artifacts(ensemble, run_config, gdf=None, include_plots=True, include_district_csvs=False)`
 - `MMD_Generation_Layer/Processor/main.py`
   - Script entrypoint for running generation and optionally launching Streamlit.
+  - Launches Streamlit through the same Python interpreter running the pipeline so `--dashboard` and `--dashboard-only` cannot resolve a different global Streamlit environment.
   - Functions:
     - `run_generation_pipeline(config_path=None, include_plots=True, include_district_csvs=False)`
     - `run_streamlit_dashboard(extra_args=None)`
