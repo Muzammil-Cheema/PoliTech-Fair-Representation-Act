@@ -568,11 +568,7 @@ def runtime_mode_settings(run_config: RunConfig) -> dict[str, int | str]:
             raise ValueError("seat_vector must be non-empty when generation_mode='MMD'")
 
         smd_num_districts = run_config.mmd_smd_multiplier * len(run_config.seat_vector)
-        plans_per_smd_plan = run_config.mmd_plans_per_smd_plan
-        smd_num_plans = max(
-            1,
-            (run_config.num_plans + plans_per_smd_plan - 1) // plans_per_smd_plan,
-        )
+        smd_num_plans = max(1, run_config.num_plans // run_config.mmd_plans_per_smd_plan)
 
     return {
         "mode": mode,

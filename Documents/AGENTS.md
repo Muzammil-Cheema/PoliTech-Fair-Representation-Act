@@ -246,7 +246,7 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `describe_run_config(run_config)`
 - `MMD_Generation_Layer/Processor/generation_logic.py`
   - Script-based SMD generation and current FRA multimember generation business logic.
-  - In MMD mode, derives the temporary SMD plan count using ceiling division of `num_plans` by `mmd_plans_per_smd_plan`.
+  - In MMD mode, derives the temporary SMD plan count using floor division of `num_plans` by `mmd_plans_per_smd_plan`, with a minimum of one temporary plan.
   - Functions:
     - `load_and_build_graph(shape_path=shape_path, id_col=ID_COLUMN, geom_col=GEOM_COLUMN)`
     - `create_initial_partition(graph, num_districts=NUM_DISTRICTS, seed=SEED, population_tolerance=0.05)`
