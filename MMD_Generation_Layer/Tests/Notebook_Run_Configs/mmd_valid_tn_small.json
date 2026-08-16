@@ -1,6 +1,6 @@
 {
   "generation_mode": "MMD",
-  "num_plans": 12,
+  "num_plans": 20,
   "num_districts": 9,
   "seed": 77889,
   "shape_path": "../Data/Shapefiles/TN/tn_2024_with_population.shp",
