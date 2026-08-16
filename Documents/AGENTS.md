@@ -231,7 +231,9 @@ This file must be updated after **every LLM-authored code change** so the docume
   - Runtime config and JSON config loading for script-based MMD runs.
   - Classes:
     - `RunConfig`
+    - `DashboardRunMetadata`
   - Functions:
+    - `load_dashboard_run_metadata(output_dir=None)`
     - `default_run_config()`
     - `resolve_run_config_path(config_path)`
     - `resolve_runtime_path(path_value)`
@@ -244,6 +246,7 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `describe_run_config(run_config)`
 - `MMD_Generation_Layer/Processor/generation_logic.py`
   - Script-based SMD generation and current FRA multimember generation business logic.
+  - In MMD mode, derives the temporary SMD plan count using ceiling division of `num_plans` by `mmd_plans_per_smd_plan`.
   - Functions:
     - `load_and_build_graph(shape_path=shape_path, id_col=ID_COLUMN, geom_col=GEOM_COLUMN)`
     - `create_initial_partition(graph, num_districts=NUM_DISTRICTS, seed=SEED, population_tolerance=0.05)`
@@ -275,6 +278,7 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `main(argv=None)`
 - `MMD_Generation_Layer/Client/baseline_dashboard.py`
   - Streamlit dashboard for existing baseline outputs.
+  - Reads all run-specific values and artifact paths through `DashboardRunMetadata` rather than importing path values directly from `config.py`.
   - Functions:
     - `load_ensemble_results(csv_path: str) -> pd.DataFrame`
     - `load_shapefile(shape_path: str, id_col: str = ID_COLUMN) -> gpd.GeoDataFrame`
