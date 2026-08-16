@@ -11,6 +11,6 @@
   "mmd_plans_per_smd_plan": 5,
   "max_mmd_attempts_per_smd_plan": 20,
   "notes": "Small quick-run MMD scenario for Tennessee using a compact seat vector.",
-  "expected_behavior": "Should attempt 2 MMD plans per temporary SMD plan and save a small valid Tennessee MMD ensemble.",
+  "expected_behavior": "Should generate 2 temporary SMD plans, attempt up to 5 MMD plans from each, and save up to 10 valid Tennessee MMD plans.",
   "seat_vector": [3, 3, 3]
 }
