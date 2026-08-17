@@ -16,14 +16,15 @@ The fastest way to avoid regressions is to treat those as separate products with
 
 Current implementation:
 
-- Uses a North Carolina precinct shapefile at `MMD_Generation_Layer/Data/Shapefiles/NC/nc_2024_with_population.shp`.
+- Uses precinct shapefiles organized per state under `MMD_Generation_Layer/Data/Shapefiles/<STATE>/` (e.g. `NC/nc_2024_with_population.shp`); `config.py` defaults to North Carolina.
 - Builds district-plan ensembles with GerryChain/ReCom from `MMD_Generation_Layer/Processor/main.ipynb`.
 - Uses shared MMD config in `MMD_Generation_Layer/config.py`.
-- Writes baseline plan summaries to `MMD_Generation_Layer/Outputs/baseline_ensemble.csv`.
-- Writes precinct-to-district assignment JSON files to `MMD_Generation_Layer/Outputs/Plan_Assignments/`.
-- Optionally writes the temporary SMD plans used to build MMD output to `MMD_Generation_Layer/Outputs/Intermediate_SMD_Plans/` when `save_intermediate_smd_plans` is set (debugging/inspection aid, off by default; see below).
-- Writes the resolved run config (`shape_path`, `num_districts`, `num_plans`, `id_column`, `geom_column`) to `MMD_Generation_Layer/Outputs/run_metadata.json` after each run.
-- Provides a Streamlit dashboard in `MMD_Generation_Layer/Client/baseline_dashboard.py` that reads `run_metadata.json` to resolve which state's shapefile/config to render, falling back to `config.py`'s NC defaults if no metadata file is present.
+- Outputs are scoped per state under `MMD_Generation_Layer/Outputs/<STATE>/`, where `<STATE>` is the shapefile's parent folder name (e.g. `Outputs/NC/`, `Outputs/SC/`). Running the pipeline for one state never overwrites another state's output folder.
+- Writes baseline plan summaries to `MMD_Generation_Layer/Outputs/<STATE>/baseline_ensemble.csv`.
+- Writes precinct-to-district assignment JSON files to `MMD_Generation_Layer/Outputs/<STATE>/Plan_Assignments/`.
+- Optionally writes the temporary SMD plans used to build MMD output to `MMD_Generation_Layer/Outputs/<STATE>/Intermediate_SMD_Plans/` when `save_intermediate_smd_plans` is set (debugging/inspection aid, off by default; see below).
+- Writes the resolved run config (`shape_path`, `num_districts`, `num_plans`, `id_column`, `geom_column`) to `MMD_Generation_Layer/Outputs/<STATE>/run_metadata.json` after each run.
+- Provides a Streamlit dashboard in `MMD_Generation_Layer/Client/baseline_dashboard.py` with a sidebar "State" dropdown listing every state folder found under `MMD_Generation_Layer/Outputs/`; it reads that state's `run_metadata.json` to resolve which shapefile/config to render. If no state has been run yet, the dashboard shows an error asking you to run the pipeline first.
 
 Data note: current MMD runs pair 2020 Census population figures with 2024 voting data. Keep that year mismatch in mind when interpreting outputs or comparing them to fully time-aligned analyses.
 
@@ -83,7 +84,7 @@ Important config rules:
 - In `MMD` mode, `seat_vector` must be a non-empty list of positive integers.
 - Legacy `mmd_seat_vector` is intentionally rejected with a clear error.
 - The loader is strict and raises errors on unknown keys.
-- `save_intermediate_smd_plans` (bool, default `false`) only changes behavior in `MMD` mode: when `true`, it writes the temporary SMD plans used to build MMD output as JSON to `MMD_Generation_Layer/Outputs/Intermediate_SMD_Plans/` (`smd_plan_<id>.json`, one per temporary SMD plan), without changing the normal MMD `Plan_Assignments` output. In `SMD` mode the flag is accepted but explicitly ignored: the run logs an info message noting it has no effect and does not create the directory.
+- `save_intermediate_smd_plans` (bool, default `false`) only changes behavior in `MMD` mode: when `true`, it writes the temporary SMD plans used to build MMD output as JSON to `MMD_Generation_Layer/Outputs/<STATE>/Intermediate_SMD_Plans/` (`smd_plan_<id>.json`, one per temporary SMD plan), without changing the normal MMD `Plan_Assignments` output. In `SMD` mode the flag is accepted but explicitly ignored: the run logs an info message noting it has no effect and does not create the directory.
 
 ## Best-Practice Structure
 
@@ -220,7 +221,7 @@ Supporting simulation test utilities:
 
 When you add visualization, consume outputs from:
 
-- `MMD_Generation_Layer/Outputs/Plan_Assignments/*.json` and `MMD_Generation_Layer/Outputs/baseline_ensemble.csv` for district-plan maps and ensemble diagnostics.
+- `MMD_Generation_Layer/Outputs/<STATE>/Plan_Assignments/*.json` and `MMD_Generation_Layer/Outputs/<STATE>/baseline_ensemble.csv` for district-plan maps and ensemble diagnostics.
 - `score_candidates_for_elector_unit(...)` (candidate score traces)
 - simulation-ready JSON outputs in `Pipe/` (ballot and candidate payloads)
 
