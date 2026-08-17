@@ -9,7 +9,18 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
 
+from MMD_Generation_Layer import config as project_config
 from MMD_Generation_Layer.Processor.runtime_setup import load_dashboard_run_metadata
+
+
+def discover_available_states(outputs_root: Path) -> list[str]:
+    """List state folders under outputs_root, most recently modified first."""
+    if not outputs_root.exists():
+        return []
+
+    state_dirs = [entry for entry in outputs_root.iterdir() if entry.is_dir()]
+    state_dirs.sort(key=lambda entry: entry.stat().st_mtime, reverse=True)
+    return [entry.name for entry in state_dirs]
 
 
 # Page config
@@ -177,7 +188,15 @@ def plot_baseline_histogram(
 
 def main():
     """Main dashboard application."""
-    dashboard_metadata = load_dashboard_run_metadata()
+    outputs_root = project_config.base_dir / "Outputs"
+    available_states = discover_available_states(outputs_root)
+
+    if not available_states:
+        st.error("❌ No pipeline runs found under Outputs/. Run the MMD pipeline for a state first.")
+        st.stop()
+
+    selected_state = st.sidebar.selectbox("State", options=available_states)
+    dashboard_metadata = load_dashboard_run_metadata(outputs_root / selected_state)
 
     st.title("🗺️ Baseline Ensemble Dashboard")
     st.markdown("### Step 1: Traditional Single-Member Districts")
