@@ -1,0 +1,188 @@
+{
+  "election_id": "multi-seat-three-round-tie-break-cascade",
+  "seat_count": 2,
+  "mode": "multi_seat_stv",
+  "tie_break_order": [
+    "F",
+    "E",
+    "D",
+    "C",
+    "B",
+    "A"
+  ],
+  "max_ranks_allowed": 3,
+  "candidates": [
+    {
+      "candidate_id": "A",
+      "withdrawn": false
+    },
+    {
+      "candidate_id": "B",
+      "withdrawn": false
+    },
+    {
+      "candidate_id": "C",
+      "withdrawn": false
+    },
+    {
+      "candidate_id": "D",
+      "withdrawn": false
+    },
+    {
+      "candidate_id": "E",
+      "withdrawn": false
+    },
+    {
+      "candidate_id": "F",
+      "withdrawn": false
+    }
+  ],
+  "ballots": [
+    {
+      "ballot_id": "A1",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "A"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "A2",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "A"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "A3",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "A"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "B1",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "B"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "B2",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "B"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "B3",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "B"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "C1",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "C"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "B"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "D1",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "D"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "C"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "B"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "E1",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "E"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "A"
+          ]
+        }
+      ]
+    },
+    {
+      "ballot_id": "F1",
+      "rankings": [
+        {
+          "rank": 1,
+          "candidate_ids": [
+            "F"
+          ]
+        },
+        {
+          "rank": 2,
+          "candidate_ids": [
+            "E"
+          ]
+        },
+        {
+          "rank": 3,
+          "candidate_ids": [
+            "A"
+          ]
+        }
+      ]
+    }
+  ]
+}
