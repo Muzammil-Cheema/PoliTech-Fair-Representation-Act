@@ -255,13 +255,15 @@ def apply_run_config(
     validate_run_config(config, base_config)
 
     seat_vector = extract_seat_vector_from_config(config) or base_config.seat_vector
+    resolved_shape_path = resolve_runtime_path(config.get("shape_path", base_config.shape_path))
+    run_output_dir = project_config.base_dir / "Outputs" / resolved_shape_path.parent.name
 
     return RunConfig(
         generation_mode=str(config.get("generation_mode", base_config.generation_mode)).strip().upper(),
         num_plans=int(config.get("num_plans", base_config.num_plans)),
         num_districts=int(config.get("num_districts", base_config.num_districts)),
         seed=int(config.get("seed", base_config.seed)),
-        shape_path=resolve_runtime_path(config.get("shape_path", base_config.shape_path)),
+        shape_path=resolved_shape_path,
         id_column=str(config.get("id_column", base_config.id_column)),
         geom_column=str(config.get("geom_column", base_config.geom_column)),
         pop_column=str(config.get("pop_column", base_config.pop_column)),
@@ -285,11 +287,11 @@ def apply_run_config(
                 base_config.save_intermediate_smd_plans,
             )
         ),
-        output_dir=base_config.output_dir,
-        plans_dir=base_config.plans_dir,
-        intermediate_smd_plans_dir=base_config.intermediate_smd_plans_dir,
-        ensemble_csv_path=base_config.ensemble_csv_path,
-        seat_share_png_path=base_config.seat_share_png_path,
+        output_dir=run_output_dir,
+        plans_dir=run_output_dir / project_config.plans_dir.name,
+        intermediate_smd_plans_dir=run_output_dir / project_config.intermediate_smd_plans_dir.name,
+        ensemble_csv_path=run_output_dir / project_config.ensemble_csv_path.name,
+        seat_share_png_path=run_output_dir / project_config.seat_share_png_path.name,
     )
 
 
