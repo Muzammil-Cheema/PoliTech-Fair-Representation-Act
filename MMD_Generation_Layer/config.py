@@ -6,7 +6,7 @@ from pathlib import Path
 base_dir = Path(__file__).resolve().parent
 processor_dir = base_dir / "Processor"
 shape_path = base_dir / "Data" / "Shapefiles" / "NC" / "nc_2024_with_population.shp"
-output_dir = base_dir / "Outputs"
+output_dir = base_dir / "Outputs" / shape_path.parent.name
 plans_dir = output_dir / "Plan_Assignments"
 intermediate_smd_plans_dir = output_dir / "Intermediate_SMD_Plans"
 
