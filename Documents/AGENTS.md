@@ -160,12 +160,14 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `plans_dir`
     - `ensemble_csv_path`
     - `seat_share_png_path`
+    - `seed_plan_path`
   - Global constants:
     - `NUM_PLANS`
     - `NUM_DISTRICTS`
     - `ID_COLUMN`
     - `GEOM_COLUMN`
     - `SEED`
+    - `RECOM_VARIANT`, `BURN_IN_STEPS`, `STEP_INTERVAL`, `MAX_SEED_ATTEMPTS`, `SAVE_SEED_PLAN`: native multimember chain defaults (`"district_pairs_mst"`, `0`, `1`, `10`, `False`).
 - `MMD_Generation_Layer/Data/Shapefiles/NC/`
   - North Carolina shapefile sidecar files:
     - `nc_2024_with_population.shp`
@@ -232,6 +234,13 @@ This file must be updated after **every LLM-authored code change** so the docume
   - Package marker for script-based MMD processor modules.
 - `MMD_Generation_Layer/Processor/runtime_setup.py`
   - Runtime config and JSON config loading for script-based MMD runs.
+  - Native multimember chain config keys (validated now, consumed once the native chain is wired in):
+    - `recom_variant`: one of `VALID_RECOM_VARIANTS` (`district_pairs_mst`, `cut_edges_mst`, `district_pairs_ust`, `cut_edges_ust`).
+    - `burn_in_steps`: non-negative integer.
+    - `step_interval`: positive integer.
+    - `max_seed_attempts`: positive integer.
+    - `save_seed_plan`: boolean; `RunConfig.seed_plan_path` is where the seed plan is written.
+  - In `MMD` mode, `seat_vector` must contain at least 2 districts.
   - Classes:
     - `RunConfig`
     - `DashboardRunMetadata`
@@ -313,6 +322,8 @@ This file must be updated after **every LLM-authored code change** so the docume
   - `smd_valid_baseline.json`, `smd_valid_small_debug.json`: valid SMD scenarios.
   - `mmd_valid_balanced.json`, `mmd_valid_high_variance.json`, `mmd_valid_seat_vector_alias.json`: valid MMD scenarios using `seat_vector`.
   - `mmd_edge_strict_tolerance.json`, `mmd_edge_low_attempt_budget.json`: valid edge-case stress scenarios.
+  - `mmd_valid_chain_controls_tn_small.json`: valid Tennessee scenario setting every native-chain control to a non-default value.
+  - `invalid_recom_variant.json`, `invalid_negative_burn_in_steps.json`, `invalid_zero_step_interval.json`, `invalid_zero_max_seed_attempts.json`, `invalid_non_bool_save_seed_plan.json`, `invalid_single_district_seat_vector.json`: invalid native-chain control fixtures.
   - `invalid_mode.json`, `invalid_negative_tolerance.json`, `invalid_tolerance_gt_one.json`, `invalid_empty_mmd_seat_vector.json`, `invalid_nonpositive_mmd_seat_vector.json`, `invalid_null_mmd_seat_vector.json`, `invalid_unknown_key.json`, `invalid_conflicting_seat_vectors.json`, `invalid_seat_vector_sum_mismatch.json`: invalid-input fixtures intended to raise fast validation errors (including legacy key rejection, bad `seat_vector` content, and seat-sum mismatch checks).
 
 ### `Representational_Layer/Attributes/`
@@ -537,7 +548,9 @@ This file must be updated after **every LLM-authored code change** so the docume
 - `Global_Utilities/json_io.py`
   - `PROJECT_ROOT`, `PIPE_DIR_NAME`
 - `MMD_Generation_Layer/config.py`
-  - `base_dir`, `processor_dir`, `shape_path`, `output_dir`, `plans_dir`, `ensemble_csv_path`, `seat_share_png_path`, `NUM_PLANS`, `NUM_DISTRICTS`, `ID_COLUMN`, `GEOM_COLUMN`, `SEED`
+  - `base_dir`, `processor_dir`, `shape_path`, `output_dir`, `plans_dir`, `ensemble_csv_path`, `seat_share_png_path`, `seed_plan_path`, `NUM_PLANS`, `NUM_DISTRICTS`, `ID_COLUMN`, `GEOM_COLUMN`, `SEED`, `RECOM_VARIANT`, `BURN_IN_STEPS`, `STEP_INTERVAL`, `MAX_SEED_ATTEMPTS`, `SAVE_SEED_PLAN`
+- `MMD_Generation_Layer/Processor/runtime_setup.py`
+  - `RUN_CONFIG_ALLOWED_KEYS`, `VALID_RECOM_VARIANTS`
 - `MMD_Generation_Layer/Processor/mmd_generation.py`
   - `SEED_SPLIT_MAX_ATTEMPTS`
   - Internal: `_REMAINDER_LABEL`, `_SEED_ATTEMPT_FAILURES`

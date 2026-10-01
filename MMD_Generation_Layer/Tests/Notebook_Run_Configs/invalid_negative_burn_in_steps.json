@@ -1,0 +1,18 @@
+{
+  "generation_mode": "MMD",
+  "num_plans": 20,
+  "num_districts": 9,
+  "seed": 77889,
+  "shape_path": "../Data/Shapefiles/TN/tn_2024_with_population.shp",
+  "id_column": "UNIQUE_ID",
+  "geom_column": "geometry",
+  "population_tolerance": 0.05,
+  "burn_in_steps": -1,
+  "notes": "burn_in_steps must be zero or a positive integer.",
+  "expected_behavior": "load_run_config should raise ValueError for negative burn_in_steps.",
+  "seat_vector": [
+    3,
+    3,
+    3
+  ]
+}

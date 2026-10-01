@@ -29,9 +29,21 @@ RUN_CONFIG_ALLOWED_KEYS = {
     "mmd_plans_per_smd_plan",
     "max_mmd_attempts_per_smd_plan",
     "save_intermediate_smd_plans",
+    "recom_variant",
+    "burn_in_steps",
+    "step_interval",
+    "max_seed_attempts",
+    "save_seed_plan",
     "expected_behavior",
     "notes",
 }
+
+VALID_RECOM_VARIANTS = (
+    "district_pairs_mst",
+    "cut_edges_mst",
+    "district_pairs_ust",
+    "cut_edges_ust",
+)
 
 
 @dataclass(frozen=True)
@@ -54,11 +66,17 @@ class RunConfig:
     population_tolerance: float
     max_mmd_attempts_per_smd_plan: int
     save_intermediate_smd_plans: bool
+    recom_variant: str
+    burn_in_steps: int
+    step_interval: int
+    max_seed_attempts: int
+    save_seed_plan: bool
     output_dir: Path
     plans_dir: Path
     intermediate_smd_plans_dir: Path
     ensemble_csv_path: Path
     seat_share_png_path: Path
+    seed_plan_path: Path
 
 
 @dataclass(frozen=True)
@@ -130,11 +148,17 @@ def default_run_config() -> RunConfig:
         population_tolerance=project_config.POPULATION_TOLERANCE,
         max_mmd_attempts_per_smd_plan=project_config.MAX_MMD_ATTEMPTS_PER_SMD_PLAN,
         save_intermediate_smd_plans=project_config.SAVE_INTERMEDIATE_SMD_PLANS,
+        recom_variant=project_config.RECOM_VARIANT,
+        burn_in_steps=project_config.BURN_IN_STEPS,
+        step_interval=project_config.STEP_INTERVAL,
+        max_seed_attempts=project_config.MAX_SEED_ATTEMPTS,
+        save_seed_plan=project_config.SAVE_SEED_PLAN,
         output_dir=project_config.output_dir,
         plans_dir=project_config.plans_dir,
         intermediate_smd_plans_dir=project_config.intermediate_smd_plans_dir,
         ensemble_csv_path=project_config.ensemble_csv_path,
         seat_share_png_path=project_config.seat_share_png_path,
+        seed_plan_path=project_config.seed_plan_path,
     )
 
 
@@ -218,9 +242,23 @@ def validate_run_config(config: dict[str, Any], base_config: RunConfig | None = 
             if not isinstance(value, int) or value <= 0:
                 raise ValueError(f"{key} must be a positive integer")
 
-    if "save_intermediate_smd_plans" in config:
-        if not isinstance(config["save_intermediate_smd_plans"], bool):
-            raise ValueError("save_intermediate_smd_plans must be a boolean")
+    for key in ["step_interval", "max_seed_attempts"]:
+        if key in config:
+            value = config[key]
+            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+                raise ValueError(f"{key} must be a positive integer")
+
+    if "burn_in_steps" in config:
+        value = config["burn_in_steps"]
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError("burn_in_steps must be a non-negative integer")
+
+    if "recom_variant" in config and config["recom_variant"] not in VALID_RECOM_VARIANTS:
+        raise ValueError(f"recom_variant must be one of {list(VALID_RECOM_VARIANTS)}")
+
+    for key in ["save_intermediate_smd_plans", "save_seed_plan"]:
+        if key in config and not isinstance(config[key], bool):
+            raise ValueError(f"{key} must be a boolean")
 
     if "population_tolerance" in config:
         tolerance = config["population_tolerance"]
@@ -235,6 +273,8 @@ def validate_run_config(config: dict[str, Any], base_config: RunConfig | None = 
         effective_seat_vector = resolved_seat_vector or base_config.seat_vector
         if not effective_seat_vector:
             raise ValueError("seat_vector is required when generation_mode is 'MMD'")
+        if len(effective_seat_vector) < 2:
+            raise ValueError("seat_vector must contain at least 2 districts when generation_mode is 'MMD'")
 
         effective_num_districts = int(config.get("num_districts", base_config.num_districts))
         effective_total_seats = sum(int(seat_count) for seat_count in effective_seat_vector)
@@ -285,11 +325,17 @@ def apply_run_config(
                 base_config.save_intermediate_smd_plans,
             )
         ),
+        recom_variant=str(config.get("recom_variant", base_config.recom_variant)),
+        burn_in_steps=int(config.get("burn_in_steps", base_config.burn_in_steps)),
+        step_interval=int(config.get("step_interval", base_config.step_interval)),
+        max_seed_attempts=int(config.get("max_seed_attempts", base_config.max_seed_attempts)),
+        save_seed_plan=bool(config.get("save_seed_plan", base_config.save_seed_plan)),
         output_dir=base_config.output_dir,
         plans_dir=base_config.plans_dir,
         intermediate_smd_plans_dir=base_config.intermediate_smd_plans_dir,
         ensemble_csv_path=base_config.ensemble_csv_path,
         seat_share_png_path=base_config.seat_share_png_path,
+        seed_plan_path=base_config.seed_plan_path,
     )
 
 
@@ -332,3 +378,8 @@ def describe_run_config(run_config: RunConfig) -> None:
     info(f"population_tolerance: {run_config.population_tolerance}")
     info(f"seat_vector: {list(run_config.seat_vector)}")
     info(f"save_intermediate_smd_plans: {run_config.save_intermediate_smd_plans}")
+    info(f"recom_variant: {run_config.recom_variant}")
+    info(f"burn_in_steps: {run_config.burn_in_steps}")
+    info(f"step_interval: {run_config.step_interval}")
+    info(f"max_seed_attempts: {run_config.max_seed_attempts}")
+    info(f"save_seed_plan: {run_config.save_seed_plan}")

@@ -13,6 +13,7 @@ intermediate_smd_plans_dir = output_dir / "Intermediate_SMD_Plans"
 # Paths
 ensemble_csv_path = output_dir / "baseline_ensemble.csv"
 seat_share_png_path = output_dir / "seat_share.png"
+seed_plan_path = output_dir / "seed_plan.json"
 
 # Global constants
 GENERATION_MODE = "MMD"
@@ -30,3 +31,8 @@ MMD_PLANS_PER_SMD_PLAN = 5
 POPULATION_TOLERANCE = 0.05
 MAX_MMD_ATTEMPTS_PER_SMD_PLAN = 10
 SAVE_INTERMEDIATE_SMD_PLANS = False
+RECOM_VARIANT = "district_pairs_mst"
+BURN_IN_STEPS = 0
+STEP_INTERVAL = 1
+MAX_SEED_ATTEMPTS = 10
+SAVE_SEED_PLAN = False
