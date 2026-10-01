@@ -6,9 +6,13 @@ import random
 from collections.abc import Hashable, Mapping, Sequence
 from functools import partial
 
-from gerrychain import Graph, Partition
+from gerrychain import Graph, MarkovChain, Partition
+from gerrychain.accept import always_accept
+from gerrychain.constraints import contiguous, within_percent_of_ideal_population_per_member
 from gerrychain.constraints.contiguity import number_of_contiguous_parts
+from gerrychain.proposals import MultiMemberReCom
 from gerrychain.proposals.multi_member_tree_proposals import epsilon_tree_bipartition_multi_member
+from gerrychain.proposals.tree_proposals import MetagraphError
 from gerrychain.tree import (
     BalanceError,
     PopulationBalanceError,
@@ -17,7 +21,12 @@ from gerrychain.tree import (
 )
 from gerrychain.updaters import Tally
 
-from Global_Utilities import success, warn
+from Global_Utilities import info, success, warn
+from MMD_Generation_Layer.Processor.generation_logic import (
+    assignment_by_original_node_id,
+    log_captured_warnings,
+)
+from MMD_Generation_Layer.Processor.runtime_setup import RunConfig
 
 # Spanning trees drawn for one split before a seed attempt gives up and the caller retries.
 # GerryChain's default (100000) would stall for minutes on a statewide graph before retrying.
@@ -198,3 +207,127 @@ def create_mmd_seed_partition(
         f"population_tolerance={population_tolerance} after {max_seed_attempts} attempts; "
         "try a higher population_tolerance or max_seed_attempts."
     )
+
+
+def _build_plan_record(
+    partition: Partition,
+    members_per_district: Mapping[Hashable, int],
+    plan_id: int,
+    chain_step: int,
+) -> dict:
+    """Build the saved plan record; seats are counted winner-take-all per district, by seat count."""
+    total_seats = sum(members_per_district.values())
+    district_summaries = []
+    dem_seats = 0
+
+    for district_id in sorted(partition.parts):
+        seat_count = members_per_district[district_id]
+        votes_dem = int(partition["votes_dem"][district_id])
+        votes_rep = int(partition["votes_rep"][district_id])
+        if votes_dem > votes_rep:
+            dem_seats += seat_count
+        district_summaries.append(
+            {
+                "district_id": district_id,
+                "seat_count": seat_count,
+                "population": int(partition["population"][district_id]),
+                "votes_dem": votes_dem,
+                "votes_rep": votes_rep,
+            }
+        )
+
+    return {
+        "results": {
+            "plan_id": plan_id,
+            "dem_seats": dem_seats,
+            "rep_seats": total_seats - dem_seats,
+            "dem_seat_share": dem_seats / total_seats,
+            "total_seats": total_seats,
+            "chain_step": chain_step,
+        },
+        "assignment": assignment_by_original_node_id(partition),
+        "district_summaries": district_summaries,
+    }
+
+
+def generate_mmd_ensemble(graph: Graph, run_config: RunConfig) -> tuple[list[dict], dict]:
+    """Generate MMD plans with GerryChain's native multi-member ReCom from an auto-built seed.
+
+    The seed is chain step 0 and is never saved as a plan. After discarding ``burn_in_steps``
+    steps, every ``step_interval``-th step is saved until ``num_plans`` plans are kept.
+
+    Returns:
+        ``(ensemble, seed_record)`` where ``seed_record`` holds ``seat_vector``,
+        ``members_per_district``, and the seed's precinct ``assignment``.
+
+    Raises:
+        RuntimeError: If no valid seed is found, or the chain cannot split any adjacent pair.
+    """
+    seat_vector = [int(seat_count) for seat_count in run_config.seat_vector]
+    members_per_district = dict(enumerate(seat_vector))
+    population_tolerance = run_config.population_tolerance
+    num_plans = run_config.num_plans
+    burn_in_steps = run_config.burn_in_steps
+    step_interval = run_config.step_interval
+    total_steps = burn_in_steps + num_plans * step_interval + 1
+    rng = random.Random(run_config.seed)
+
+    info(f"Seat vector: {seat_vector}")
+    info(
+        f"Native MMD chain: {run_config.recom_variant}, {total_steps - 1} steps "
+        f"(burn-in {burn_in_steps}, keep every {step_interval}) for {num_plans} plans."
+    )
+
+    ensemble: list[dict] = []
+    progress_every = max(1, num_plans // 10)
+
+    with log_captured_warnings():
+        seed_partition = create_mmd_seed_partition(
+            graph,
+            seat_vector,
+            population_tolerance,
+            rng,
+            max_seed_attempts=run_config.max_seed_attempts,
+        )
+        proposal = getattr(MultiMemberReCom, run_config.recom_variant)(
+            pop_col="population",
+            pop_target=_per_seat_population(graph, seat_vector),
+            epsilon=population_tolerance,
+            members_per_district=members_per_district,
+        )
+        chain = MarkovChain(
+            proposal_fn=proposal,
+            constraints=[
+                contiguous,
+                within_percent_of_ideal_population_per_member(
+                    seed_partition, members_per_district, population_tolerance
+                ),
+            ],
+            acceptance_fn=always_accept,
+            initial_partition=seed_partition,
+            total_steps=total_steps,
+            rng=rng,
+        )
+
+        try:
+            for chain_step, partition in enumerate(chain):
+                if chain_step <= burn_in_steps or (chain_step - burn_in_steps) % step_interval:
+                    continue
+                ensemble.append(
+                    _build_plan_record(partition, members_per_district, len(ensemble) + 1, chain_step)
+                )
+                if len(ensemble) % progress_every == 0 or len(ensemble) == num_plans:
+                    info(f"Saved {len(ensemble)}/{num_plans} plans (chain step {chain_step}).")
+        except MetagraphError as exc:
+            raise RuntimeError(
+                f"MultiMemberReCom could not split any adjacent district pair after saving "
+                f"{len(ensemble)}/{num_plans} plans; try a higher population_tolerance."
+            ) from exc
+
+    seed_record = {
+        "seat_vector": seat_vector,
+        "members_per_district": members_per_district,
+        "assignment": assignment_by_original_node_id(seed_partition),
+    }
+    success(f"Generated {len(ensemble)} MMD plans with native MultiMemberReCom.")
+    return ensemble, seed_record

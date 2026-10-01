@@ -84,6 +84,25 @@ def save_intermediate_smd_plans(
     success(f"Saved {len(smd_ensemble)} intermediate SMD plans to {intermediate_smd_plans_dir}")
 
 
+def save_seed_plan(seed_record: dict, seed_plan_path: Path) -> Path:
+    """Save the MMD seed plan's seat vector, seats per district label, and precinct assignment."""
+    seed_plan_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "seat_vector": [int(seat_count) for seat_count in seed_record["seat_vector"]],
+        "members_per_district": {
+            str(district_id): int(seat_count)
+            for district_id, seat_count in seed_record["members_per_district"].items()
+        },
+        "assignment": {
+            str(node_id): int(district_id) for node_id, district_id in seed_record["assignment"].items()
+        },
+    }
+    with seed_plan_path.open("w") as file:
+        json.dump(payload, file)
+    success(f"Saved MMD seed plan: {seed_plan_path}")
+    return seed_plan_path
+
+
 def plot_seat_share_histogram(results_df: pd.DataFrame, output_path: Path) -> None:
     """Create and save a Democratic seat-share histogram."""
     output_path.parent.mkdir(parents=True, exist_ok=True)

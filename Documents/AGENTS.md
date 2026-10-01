@@ -147,8 +147,8 @@ This file must be updated after **every LLM-authored code change** so the docume
 ### `MMD_Generation_Layer/`
 - Purpose:
   - Generates and visualizes baseline district-plan ensembles from geographic data.
-  - Uses equal-population ReCom for baseline temporary SMD generation.
-  - Includes notebook and script workflows that convert temporary SMD plans into genuine FRA-style multimember district plans using a seat vector and seat-weighted population targets.
+  - `SMD` mode uses equal-population ReCom.
+  - Script-based `MMD` mode builds a seat-proportional base MMD seed plan at runtime and generates FRA-style multimember district plans with GerryChain 1.0.0's native `MultiMemberReCom`, keeping each district's seat count fixed. The legacy notebook still contains the older temporary-SMD-to-MMD workflow.
   - Produces usable FRA multimember district artifacts, but still needs better proposal strategies and efficiency work before large-scale use.
   - Current runs pair 2020 Census population figures with 2024 voting data, so downstream analysis should keep that temporal mismatch in mind.
 - `MMD_Generation_Layer/config.py`
@@ -234,7 +234,7 @@ This file must be updated after **every LLM-authored code change** so the docume
   - Package marker for script-based MMD processor modules.
 - `MMD_Generation_Layer/Processor/runtime_setup.py`
   - Runtime config and JSON config loading for script-based MMD runs.
-  - Native multimember chain config keys (validated now, consumed once the native chain is wired in):
+  - Native multimember chain config keys (used by `MMD` runs):
     - `recom_variant`: one of `VALID_RECOM_VARIANTS` (`district_pairs_mst`, `cut_edges_mst`, `district_pairs_ust`, `cut_edges_ust`).
     - `burn_in_steps`: non-negative integer.
     - `step_interval`: positive integer.
@@ -257,13 +257,16 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `bootstrap_run_config(config_path=None)`
     - `describe_run_config(run_config)`
 - `MMD_Generation_Layer/Processor/generation_logic.py`
-  - Script-based SMD generation and current FRA multimember generation business logic.
-  - In MMD mode, derives the temporary SMD plan count using floor division of `num_plans` by `mmd_plans_per_smd_plan`, with a minimum of one temporary plan.
+  - Graph loading, SMD generation, and the SMD/MMD run dispatcher. `MMD` runs are delegated to `mmd_generation.generate_mmd_ensemble(...)`, and the seed plan is saved when `save_seed_plan` is true.
+  - The temporary-SMD-to-MMD helpers (`_build_smd_unit_stats` through `generate_mmd_ensemble_from_smd_ensemble`) are no longer called by the run pipeline.
+  - `SMD` runs log an `info(...)` message when any MMD-only setting (`MMD_ONLY_SETTING_DEFAULTS`) differs from its default, since those settings are ignored.
+  - `log_captured_warnings()` routes Python warnings (for example GerryChain polygon-overlap and bipartition warnings) through `warn(...)`, once per distinct message.
   - Uses the GerryChain 1.0.0 graph API: node attributes via `graph.node_data(node)[key]`; `graph.nodes` and `graph.edges` are properties, not methods.
   - GerryChain 1.0.0 keys `partition.assignment` by internal integer node IDs; plan outputs are translated back to precinct IDs with `assignment_by_original_node_id(partition)` before saving.
   - The SMD path uses one `random.Random(seed)` for the initial partition and the chain, and passes `pair_selection="cut_edges"` to `recom` to keep GerryChain 0.3.2's cut-edge pair selection.
   - Functions:
     - `load_and_build_graph(shape_path=shape_path, id_col=ID_COLUMN, geom_col=GEOM_COLUMN, pop_col=POP_COLUMN, dem_col=DEM_COLUMN, rep_col=REP_COLUMN)`
+    - `log_captured_warnings(max_message_length=300)` (context manager)
     - `assignment_by_original_node_id(partition)`
     - `create_initial_partition(graph, num_districts=NUM_DISTRICTS, seed=SEED, population_tolerance=0.05, rng=None)`
     - `generate_baseline_ensemble(graph, num_plans=NUM_PLANS, num_districts=NUM_DISTRICTS, seed=SEED, population_tolerance=0.05)`
@@ -277,7 +280,7 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `runtime_mode_settings(run_config)`
     - `generate_ensemble_for_run(graph, run_config)`
 - `MMD_Generation_Layer/Processor/mmd_generation.py`
-  - Native GerryChain 1.0.0 multimember-district helpers. Not yet wired into the run pipeline; MMD runs still use the temporary-SMD path in `generation_logic.py`.
+  - Native GerryChain 1.0.0 multimember-district generation used by `MMD` runs.
   - Builds the base MMD seed plan from scratch by peeling off one district at a time with GerryChain's unequal-target tree split (`epsilon_tree_bipartition_multi_member`), e.g. NC `5/5/4` is split `5 | 9`, then `5 | 4`. District label `i` gets `seat_vector[i]` seats and targets `seat_vector[i] * total_population / sum(seat_vector)`.
   - Population tolerance is per seat: every district's population per seat must be within `population_tolerance` of the statewide population per seat.
   - Seed attempts cap each split at `SEED_SPLIT_MAX_ATTEMPTS` spanning trees and retry on the same `random.Random` stream, so a fixed seed reproduces the same seed plan.
@@ -286,11 +289,17 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `build_mmd_seed_assignment(graph, seat_vector, population_tolerance, rng)`
     - `validate_mmd_partition(partition, members_per_district, population_tolerance)`
     - `create_mmd_seed_partition(graph, seat_vector, population_tolerance, rng, max_seed_attempts=10)`
+    - `_build_plan_record(partition, members_per_district, plan_id, chain_step)`
+    - `generate_mmd_ensemble(graph, run_config) -> tuple[list[dict], dict]`
+  - `generate_mmd_ensemble` runs `MultiMemberReCom.<recom_variant>` with `contiguous` and `within_percent_of_ideal_population_per_member` constraints from the validated seed. The seed is chain step 0 and is never saved; after `burn_in_steps`, every `step_interval`-th step is saved until `num_plans` plans exist (`total_steps = burn_in_steps + num_plans * step_interval + 1`). One `random.Random(seed)` drives the seed and the chain.
+  - Plan records: `results` (`plan_id`, `dem_seats`, `rep_seats`, `dem_seat_share`, `total_seats`, `chain_step`), `assignment` (precinct ID to district label), and `district_summaries` (`district_id`, `seat_count`, `population`, `votes_dem`, `votes_rep`). Seats are counted winner-take-all per district, weighted by seat count.
+  - The seed record holds `seat_vector`, `members_per_district`, and the seed `assignment`.
 - `MMD_Generation_Layer/Processor/output_artifacts.py`
   - Output persistence and optional diagnostic artifacts for generated plans.
   - Functions:
     - `save_ensemble_summary(ensemble, csv_path)`
     - `save_plan_assignments(ensemble, plans_dir, clear_existing=True)`
+    - `save_seed_plan(seed_record, seed_plan_path)`
     - `plot_seat_share_histogram(results_df, output_path)`
     - `generate_district_csvs(gdf, plans_dir, output_dir)`
     - `save_output_artifacts(ensemble, run_config, gdf=None, include_plots=True, include_district_csvs=False)`
@@ -313,7 +322,8 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `plot_baseline_histogram(results_df: pd.DataFrame, output_dir: Path)`
     - `main()`
 - `MMD_Generation_Layer/Outputs/`
-  - `baseline_ensemble.csv`: summary rows with `plan_id`, `dem_seats`, `rep_seats`, and `dem_seat_share`.
+  - `baseline_ensemble.csv`: summary rows with `plan_id`, `dem_seats`, `rep_seats`, and `dem_seat_share`; `MMD` runs also include `total_seats` and `chain_step`.
+  - `seed_plan.json`: optional `MMD` seed plan (`seat_vector`, `members_per_district`, `assignment`), written when `save_seed_plan` is true.
   - `seat_share.png`: notebook-generated Democratic seat-share histogram.
   - `democratic_seats.png`: dashboard-generated Democratic seat-count histogram.
   - `Plan_Assignments/plan_*.json`: precinct ID to district ID assignment maps.
@@ -535,9 +545,8 @@ This file must be updated after **every LLM-authored code change** so the docume
 ## MMD Layer Limitations
 
 - Current code remains notebook-heavy and is not yet a stabilized package API for MMD generation.
-- Baseline generation still depends on equal-population ReCom temporary SMD plans.
-- The current MMD workflow can generate usable FRA multimember districts, but it still needs deeper validation, better proposal strategies, and stronger efficiency for larger runs.
-- Native GerryChain proposal approaches are still a planned improvement area and may produce better plan-space exploration than the current workflow.
+- Script-based `MMD` generation uses GerryChain 1.0.0's native `MultiMemberReCom`; burn-in and thinning (`burn_in_steps`, `step_interval`) default to keeping every chain step, so tune them for statistically independent ensembles.
+- MMD seat counts in summaries are winner-take-all per multimember district, which is a display rule, not proportional FRA/STV allocation.
 - Current checked-in MMD outputs may be stale relative to `NUM_DISTRICTS = 14`; verify outputs before relying on them for analysis.
 - Current MMD outputs do not yet create representational-layer `District` objects.
 - Current MMD outputs do not yet feed simulation-layer election JSON directly.
@@ -551,6 +560,8 @@ This file must be updated after **every LLM-authored code change** so the docume
   - `base_dir`, `processor_dir`, `shape_path`, `output_dir`, `plans_dir`, `ensemble_csv_path`, `seat_share_png_path`, `seed_plan_path`, `NUM_PLANS`, `NUM_DISTRICTS`, `ID_COLUMN`, `GEOM_COLUMN`, `SEED`, `RECOM_VARIANT`, `BURN_IN_STEPS`, `STEP_INTERVAL`, `MAX_SEED_ATTEMPTS`, `SAVE_SEED_PLAN`
 - `MMD_Generation_Layer/Processor/runtime_setup.py`
   - `RUN_CONFIG_ALLOWED_KEYS`, `VALID_RECOM_VARIANTS`
+- `MMD_Generation_Layer/Processor/generation_logic.py`
+  - `MMD_ONLY_SETTING_DEFAULTS`
 - `MMD_Generation_Layer/Processor/mmd_generation.py`
   - `SEED_SPLIT_MAX_ATTEMPTS`
   - Internal: `_REMAINDER_LABEL`, `_SEED_ATTEMPT_FAILURES`

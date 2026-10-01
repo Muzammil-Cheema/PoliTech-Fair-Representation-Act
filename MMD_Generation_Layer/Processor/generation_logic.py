@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import random
+import warnings
 from collections import defaultdict, deque
+from collections.abc import Iterator
+from contextlib import contextmanager
 from functools import partial
 
 import geopandas as gpd
@@ -17,8 +20,38 @@ from gerrychain.updaters import Tally
 
 from Global_Utilities import info, success, warn
 from MMD_Generation_Layer import config as project_config
-from MMD_Generation_Layer.Processor.output_artifacts import save_intermediate_smd_plans
+from MMD_Generation_Layer.Processor.output_artifacts import save_intermediate_smd_plans, save_seed_plan
 from MMD_Generation_Layer.Processor.runtime_setup import RunConfig
+
+# MMD-only settings and their defaults; SMD runs log when any of these were changed.
+MMD_ONLY_SETTING_DEFAULTS = {
+    "recom_variant": project_config.RECOM_VARIANT,
+    "burn_in_steps": project_config.BURN_IN_STEPS,
+    "step_interval": project_config.STEP_INTERVAL,
+    "max_seed_attempts": project_config.MAX_SEED_ATTEMPTS,
+    "save_seed_plan": project_config.SAVE_SEED_PLAN,
+}
+
+
+@contextmanager
+def log_captured_warnings(max_message_length: int = 300) -> Iterator[None]:
+    """Route Python warnings raised in the block (e.g. GerryChain's) through ``warn(...)``.
+
+    Each distinct warning is logged once, truncated to ``max_message_length`` characters.
+    """
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        yield
+
+    logged = set()
+    for warning in caught:
+        message = f"{warning.category.__name__}: {warning.message}"
+        if message in logged:
+            continue
+        logged.add(message)
+        if len(message) > max_message_length:
+            message = message[:max_message_length] + "..."
+        warn(message)
 
 
 def load_and_build_graph(
@@ -66,7 +99,8 @@ def load_and_build_graph(
     gdf = gdf.set_index(id_col, drop=False)
 
     info("Building GerryChain dual graph.")
-    graph = Graph.from_geodataframe(gdf)
+    with log_captured_warnings():
+        graph = Graph.from_geodataframe(gdf)
 
     for node in graph.nodes:
         row = gdf.loc[node]
@@ -600,45 +634,51 @@ def runtime_mode_settings(run_config: RunConfig) -> dict[str, int | str]:
 
 
 def generate_ensemble_for_run(graph: Graph, run_config: RunConfig) -> list[dict]:
-    """Generate the final ensemble for the configured SMD or MMD mode."""
+    """Generate the final ensemble for the configured SMD or MMD mode.
+
+    MMD runs use the native GerryChain multi-member chain from an auto-built seed plan; SMD runs
+    use the equal-population ReCom baseline.
+    """
     mode_settings = runtime_mode_settings(run_config)
     info(f"Mode: {mode_settings['mode']}")
     info(f"Shape path: {run_config.shape_path}")
+
+    if mode_settings["mode"] == "MMD":
+        from MMD_Generation_Layer.Processor.mmd_generation import generate_mmd_ensemble
+
+        if run_config.save_intermediate_smd_plans:
+            warn(
+                "save_intermediate_smd_plans is ignored: native MMD generation no longer builds "
+                "temporary SMD plans."
+            )
+
+        ensemble, seed_record = generate_mmd_ensemble(graph, run_config)
+        if run_config.save_seed_plan:
+            save_seed_plan(seed_record, run_config.seed_plan_path)
+        return ensemble
+
     info(f"Temporary SMD count: {mode_settings['smd_num_districts']}")
     info(f"Temporary SMD plans: {mode_settings['smd_num_plans']}")
 
-    smd_ensemble = generate_baseline_ensemble(
+    changed_mmd_settings = [
+        key for key, default in MMD_ONLY_SETTING_DEFAULTS.items() if getattr(run_config, key) != default
+    ]
+    if changed_mmd_settings:
+        info(
+            f"{', '.join(changed_mmd_settings)} only apply when generation_mode='MMD' "
+            "and are ignored for this SMD run."
+        )
+
+    if run_config.save_intermediate_smd_plans:
+        info(
+            "save_intermediate_smd_plans is ignored when generation_mode='SMD' "
+            "(it only applies to the temporary SMD plans built while generating MMD output)."
+        )
+
+    return generate_baseline_ensemble(
         graph,
         num_plans=int(mode_settings["smd_num_plans"]),
         num_districts=int(mode_settings["smd_num_districts"]),
         seed=run_config.seed,
         population_tolerance=run_config.population_tolerance,
     )
-
-    if run_config.save_intermediate_smd_plans and mode_settings["mode"] == "SMD":
-        info(
-            "save_intermediate_smd_plans is ignored when generation_mode='SMD' "
-            "(it only applies to the temporary SMD plans built while generating MMD output)."
-        )
-
-    if mode_settings["mode"] == "MMD":
-        if run_config.save_intermediate_smd_plans:
-            save_intermediate_smd_plans(smd_ensemble, run_config.intermediate_smd_plans_dir)
-
-        ensemble = generate_mmd_ensemble_from_smd_ensemble(
-            smd_ensemble=smd_ensemble,
-            graph=graph,
-            seat_vector=run_config.seat_vector,
-            plans_per_smd_plan=run_config.mmd_plans_per_smd_plan,
-            population_tolerance=run_config.population_tolerance,
-            seed=run_config.seed,
-            max_attempts_per_smd_plan=run_config.max_mmd_attempts_per_smd_plan,
-        )
-        if not ensemble:
-            raise RuntimeError(
-                "MMD generation produced 0 valid plans. "
-                "Try raising max_mmd_attempts_per_smd_plan or population_tolerance."
-            )
-        return ensemble
-
-    return smd_ensemble
