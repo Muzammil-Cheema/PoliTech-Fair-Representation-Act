@@ -11,8 +11,8 @@ import pandas as pd
 from gerrychain import Graph, MarkovChain, Partition
 from gerrychain.accept import always_accept
 from gerrychain.constraints import contiguous, within_percent_of_ideal_population
+from gerrychain.partition import recursive_tree_part
 from gerrychain.proposals import recom
-from gerrychain.tree import recursive_tree_part
 from gerrychain.updaters import Tally
 
 from Global_Utilities import info, success, warn
@@ -68,20 +68,34 @@ def load_and_build_graph(
     info("Building GerryChain dual graph.")
     graph = Graph.from_geodataframe(gdf)
 
-    for node in graph.nodes():
+    for node in graph.nodes:
         row = gdf.loc[node]
-        graph.nodes[node]["population"] = row[pop_col]
-        graph.nodes[node]["votes_dem"] = row[dem_col]
-        graph.nodes[node]["votes_rep"] = row[rep_col]
+        node_data = graph.node_data(node)
+        node_data["population"] = int(row[pop_col])
+        node_data["votes_dem"] = int(row[dem_col])
+        node_data["votes_rep"] = int(row[rep_col])
 
-    degrees = [graph.degree(node) for node in graph.nodes()]
+    degrees = [graph.degree(node) for node in graph.nodes]
     isolated_count = sum(1 for degree in degrees if degree == 0)
     median_degree = sorted(degrees)[len(degrees) // 2]
 
-    success(f"Graph built ({len(graph.nodes())} nodes, {len(graph.edges())} edges).")
+    success(f"Graph built ({len(graph.nodes)} nodes, {len(graph.edges)} edges).")
     info(f"Isolated nodes: {isolated_count}")
     info(f"Degree min/median/max: {min(degrees)}/{median_degree}/{max(degrees)}")
     return graph, gdf
+
+
+def assignment_by_original_node_id(partition: Partition) -> dict:
+    """Map a partition's assignment back to the graph's original node IDs.
+
+    GerryChain 1.0.0 keys ``partition.assignment`` by internal integer node IDs, so plan outputs
+    must be translated back to precinct IDs before they are saved or compared with the source graph.
+    """
+    graph = partition.graph
+    return {
+        graph.original_nx_node_id_for_internal_node_id(node_id): district_id
+        for node_id, district_id in partition.assignment.items()
+    }
 
 
 def create_initial_partition(
@@ -89,11 +103,12 @@ def create_initial_partition(
     num_districts: int = project_config.NUM_DISTRICTS,
     seed: int = project_config.SEED,
     population_tolerance: float = 0.05,
+    rng: random.Random | None = None,
 ) -> Partition:
     """Create an initial contiguous equal-population partition."""
-    random.seed(seed)
+    rng = rng or random.Random(seed)
 
-    total_population = sum(graph.nodes[node]["population"] for node in graph.nodes())
+    total_population = sum(graph.node_data(node)["population"] for node in graph.nodes)
     ideal_population = total_population / num_districts
 
     info(f"Creating initial partition ({num_districts} districts).")
@@ -107,6 +122,7 @@ def create_initial_partition(
         "population",
         population_tolerance,
         1,
+        rng=rng,
     )
 
     partition = Partition(
@@ -131,34 +147,39 @@ def generate_baseline_ensemble(
 ) -> list[dict]:
     """Generate an equal-population SMD ensemble using GerryChain ReCom."""
     info(f"Setting up ReCom chain to generate {num_plans} plans.")
+    rng = random.Random(seed)
 
     initial_partition = create_initial_partition(
         graph,
         num_districts=num_districts,
         seed=seed,
         population_tolerance=population_tolerance,
+        rng=rng,
     )
     population_constraint = within_percent_of_ideal_population(
         initial_partition,
         population_tolerance,
     )
 
-    total_population = sum(graph.nodes[node]["population"] for node in graph.nodes())
+    total_population = sum(graph.node_data(node)["population"] for node in graph.nodes)
     ideal_population = total_population / num_districts
+    # GerryChain 0.3.2 recom chose a random cut edge; 1.0.0 defaults to district pairs.
     proposal = partial(
         recom,
         pop_col="population",
         pop_target=ideal_population,
         epsilon=population_tolerance,
         node_repeats=2,
+        pair_selection="cut_edges",
     )
 
     chain = MarkovChain(
-        proposal=proposal,
+        proposal_fn=proposal,
         constraints=[contiguous, population_constraint],
-        accept=always_accept,
-        initial_state=initial_partition,
+        acceptance_fn=always_accept,
+        initial_partition=initial_partition,
         total_steps=num_plans,
+        rng=rng,
     )
 
     ensemble = []
@@ -182,7 +203,7 @@ def generate_baseline_ensemble(
                     "rep_seats": rep_seats,
                     "dem_seat_share": dem_seats / num_districts,
                 },
-                "assignment": dict(partition.assignment),
+                "assignment": assignment_by_original_node_id(partition),
             }
         )
 
@@ -208,9 +229,10 @@ def _build_smd_unit_stats(smd_assignment: dict, graph: Graph) -> dict[int, dict]
             }
 
         units[smd_id]["nodes"].add(node_id)
-        units[smd_id]["population"] += int(graph.nodes[node_id]["population"])
-        units[smd_id]["votes_dem"] += int(graph.nodes[node_id]["votes_dem"])
-        units[smd_id]["votes_rep"] += int(graph.nodes[node_id]["votes_rep"])
+        node_data = graph.node_data(node_id)
+        units[smd_id]["population"] += int(node_data["population"])
+        units[smd_id]["votes_dem"] += int(node_data["votes_dem"])
+        units[smd_id]["votes_rep"] += int(node_data["votes_rep"])
 
     return units
 
@@ -222,7 +244,7 @@ def _build_smd_adjacency(smd_assignment: dict, graph: Graph) -> dict[int, set[in
     for district_id in smd_assignment.values():
         smd_adjacency[int(district_id)]
 
-    for node_u, node_v in graph.edges():
+    for node_u, node_v in graph.edges:
         smd_u = int(smd_assignment[node_u])
         smd_v = int(smd_assignment[node_v])
         if smd_u == smd_v:
@@ -306,7 +328,7 @@ def _validate_mmd_plan(
     population_tolerance: float,
 ) -> tuple[bool, str]:
     """Validate full-node coverage, seat accounting, and population bounds."""
-    expected_nodes = set(graph.nodes())
+    expected_nodes = set(graph.nodes)
     assigned_nodes = set(mmd_plan["assignment"].keys())
     if assigned_nodes != expected_nodes:
         return False, "Not all nodes are mapped in final MMD assignment"
@@ -316,7 +338,7 @@ def _validate_mmd_plan(
     if observed_sorted != expected_sorted:
         return False, "MMD seat vector does not match requested seat vector"
 
-    total_population = sum(int(graph.nodes[node]["population"]) for node in graph.nodes())
+    total_population = sum(int(graph.node_data(node)["population"]) for node in graph.nodes)
     total_seats = sum(expected_sorted)
     per_seat_population = total_population / total_seats
 

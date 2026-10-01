@@ -81,6 +81,8 @@ This file must be updated after **every LLM-authored code change** so the docume
   - Open the MMD notebook workflow.
 - `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q`
   - Run all configured tests from the repository root.
+- `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q MMD_Generation_Layer/Tests`
+  - Run the MMD generation tests. They skip automatically when the `mmd` extra (GerryChain) is not installed.
 - `python Simulation_Layer/fra_engine.py`
   - Run the simulation CLI compatibility shim. This is an interactive/manual flow that prompts for an input JSON path and prints winners, final candidate status, and round details to the terminal.
 - `python Simulation_Layer/Runner/main.py`
@@ -121,7 +123,8 @@ This file must be updated after **every LLM-authored code change** so the docume
 - `pyproject.toml`: shared package, editable-install, optional dependency, Python path, and pytest configuration for all layers.
   - Extras:
     - `dev`: pytest.
-    - `mmd`: geospatial, notebook, GerryChain, and Streamlit dependencies.
+    - `mmd`: geospatial, notebook, GerryChain (`gerrychain==1.0.0`), and Streamlit dependencies. GerryChain 1.0.0 requires pandas 3, so the pandas, numpy, geopandas, scipy, networkx, and Streamlit pins move together; `rustworkx` and `tqdm` are GerryChain 1.0.0 dependencies.
+  - Pytest `testpaths` include `Representational_Layer/Tests`, `Simulation_Layer/Tests`, and `MMD_Generation_Layer/Tests`.
   - Explicit package mappings include `Representational_Layer`, `Attributes`, `Simulation_Layer`, `Core`, `Helpers`, `Runner`, `Global_Utilities`, `MMD_Generation_Layer`, and `MMD_Generation_Layer.Processor`.
   - Quote dotted package names in TOML keys, for example `"MMD_Generation_Layer.Processor"`, so TOML does not treat them as nested keys.
 - `MMD_Generation_Layer/`: copied district-generation layer for geographic district-plan ensembles and dashboarding.
@@ -247,9 +250,13 @@ This file must be updated after **every LLM-authored code change** so the docume
 - `MMD_Generation_Layer/Processor/generation_logic.py`
   - Script-based SMD generation and current FRA multimember generation business logic.
   - In MMD mode, derives the temporary SMD plan count using floor division of `num_plans` by `mmd_plans_per_smd_plan`, with a minimum of one temporary plan.
+  - Uses the GerryChain 1.0.0 graph API: node attributes via `graph.node_data(node)[key]`; `graph.nodes` and `graph.edges` are properties, not methods.
+  - GerryChain 1.0.0 keys `partition.assignment` by internal integer node IDs; plan outputs are translated back to precinct IDs with `assignment_by_original_node_id(partition)` before saving.
+  - The SMD path uses one `random.Random(seed)` for the initial partition and the chain, and passes `pair_selection="cut_edges"` to `recom` to keep GerryChain 0.3.2's cut-edge pair selection.
   - Functions:
-    - `load_and_build_graph(shape_path=shape_path, id_col=ID_COLUMN, geom_col=GEOM_COLUMN)`
-    - `create_initial_partition(graph, num_districts=NUM_DISTRICTS, seed=SEED, population_tolerance=0.05)`
+    - `load_and_build_graph(shape_path=shape_path, id_col=ID_COLUMN, geom_col=GEOM_COLUMN, pop_col=POP_COLUMN, dem_col=DEM_COLUMN, rep_col=REP_COLUMN)`
+    - `assignment_by_original_node_id(partition)`
+    - `create_initial_partition(graph, num_districts=NUM_DISTRICTS, seed=SEED, population_tolerance=0.05, rng=None)`
     - `generate_baseline_ensemble(graph, num_plans=NUM_PLANS, num_districts=NUM_DISTRICTS, seed=SEED, population_tolerance=0.05)`
     - `_build_smd_unit_stats(smd_assignment, graph)`
     - `_build_smd_adjacency(smd_assignment, graph)`
