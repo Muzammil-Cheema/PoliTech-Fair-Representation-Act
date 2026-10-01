@@ -267,6 +267,16 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `generate_mmd_ensemble_from_smd_ensemble(...)`
     - `runtime_mode_settings(run_config)`
     - `generate_ensemble_for_run(graph, run_config)`
+- `MMD_Generation_Layer/Processor/mmd_generation.py`
+  - Native GerryChain 1.0.0 multimember-district helpers. Not yet wired into the run pipeline; MMD runs still use the temporary-SMD path in `generation_logic.py`.
+  - Builds the base MMD seed plan from scratch by peeling off one district at a time with GerryChain's unequal-target tree split (`epsilon_tree_bipartition_multi_member`), e.g. NC `5/5/4` is split `5 | 9`, then `5 | 4`. District label `i` gets `seat_vector[i]` seats and targets `seat_vector[i] * total_population / sum(seat_vector)`.
+  - Population tolerance is per seat: every district's population per seat must be within `population_tolerance` of the statewide population per seat.
+  - Seed attempts cap each split at `SEED_SPLIT_MAX_ATTEMPTS` spanning trees and retry on the same `random.Random` stream, so a fixed seed reproduces the same seed plan.
+  - Functions:
+    - `_per_seat_population(graph, seat_vector)`
+    - `build_mmd_seed_assignment(graph, seat_vector, population_tolerance, rng)`
+    - `validate_mmd_partition(partition, members_per_district, population_tolerance)`
+    - `create_mmd_seed_partition(graph, seat_vector, population_tolerance, rng, max_seed_attempts=10)`
 - `MMD_Generation_Layer/Processor/output_artifacts.py`
   - Output persistence and optional diagnostic artifacts for generated plans.
   - Functions:
@@ -528,6 +538,9 @@ This file must be updated after **every LLM-authored code change** so the docume
   - `PROJECT_ROOT`, `PIPE_DIR_NAME`
 - `MMD_Generation_Layer/config.py`
   - `base_dir`, `processor_dir`, `shape_path`, `output_dir`, `plans_dir`, `ensemble_csv_path`, `seat_share_png_path`, `NUM_PLANS`, `NUM_DISTRICTS`, `ID_COLUMN`, `GEOM_COLUMN`, `SEED`
+- `MMD_Generation_Layer/Processor/mmd_generation.py`
+  - `SEED_SPLIT_MAX_ATTEMPTS`
+  - Internal: `_REMAINDER_LABEL`, `_SEED_ATTEMPT_FAILURES`
 - `Global_Utilities/logger.py`
   - `RESET`, `BLUE`, `GREEN`, `RED`, `YELLOW`
 - `Simulation_Layer/Core/config.py`
