@@ -1,10 +1,9 @@
-"""District generation logic for SMD and experimental MMD workflows."""
+"""Graph loading, SMD generation, and SMD/MMD run dispatch."""
 
 from __future__ import annotations
 
 import random
 import warnings
-from collections import defaultdict, deque
 from collections.abc import Iterator
 from contextlib import contextmanager
 from functools import partial
@@ -20,7 +19,7 @@ from gerrychain.updaters import Tally
 
 from Global_Utilities import info, success, warn
 from MMD_Generation_Layer import config as project_config
-from MMD_Generation_Layer.Processor.output_artifacts import save_intermediate_smd_plans, save_seed_plan
+from MMD_Generation_Layer.Processor.output_artifacts import save_seed_plan
 from MMD_Generation_Layer.Processor.runtime_setup import RunConfig
 
 # MMD-only settings and their defaults; SMD runs log when any of these were changed.
@@ -248,388 +247,19 @@ def generate_baseline_ensemble(
     return ensemble
 
 
-def _build_smd_unit_stats(smd_assignment: dict, graph: Graph) -> dict[int, dict]:
-    """Aggregate node-level graph attributes into per-SMD units."""
-    units: dict[int, dict] = {}
-
-    for node_id, district_id in smd_assignment.items():
-        smd_id = int(district_id)
-        if smd_id not in units:
-            units[smd_id] = {
-                "nodes": set(),
-                "population": 0,
-                "votes_dem": 0,
-                "votes_rep": 0,
-            }
-
-        units[smd_id]["nodes"].add(node_id)
-        node_data = graph.node_data(node_id)
-        units[smd_id]["population"] += int(node_data["population"])
-        units[smd_id]["votes_dem"] += int(node_data["votes_dem"])
-        units[smd_id]["votes_rep"] += int(node_data["votes_rep"])
-
-    return units
-
-
-def _build_smd_adjacency(smd_assignment: dict, graph: Graph) -> dict[int, set[int]]:
-    """Build an adjacency graph where each node is an SMD ID."""
-    smd_adjacency: dict[int, set[int]] = defaultdict(set)
-
-    for district_id in smd_assignment.values():
-        smd_adjacency[int(district_id)]
-
-    for node_u, node_v in graph.edges:
-        smd_u = int(smd_assignment[node_u])
-        smd_v = int(smd_assignment[node_v])
-        if smd_u == smd_v:
-            continue
-
-        smd_adjacency[smd_u].add(smd_v)
-        smd_adjacency[smd_v].add(smd_u)
-
-    return dict(smd_adjacency)
-
-
-def _find_bfs_merge_candidate(
-    start_smd: int,
-    seat_count: int,
-    available_smd_ids: set[int],
-    smd_adjacency: dict[int, set[int]],
-    smd_population: dict[int, int],
-    per_seat_population: float,
-    population_tolerance: float,
-    max_states: int = 20000,
-) -> tuple[set[int], int] | None:
-    """Find a contiguous SMD merge matching a seat-weighted population target."""
-    target_population = seat_count * per_seat_population
-    lower_bound = target_population * (1 - population_tolerance)
-    upper_bound = target_population * (1 + population_tolerance)
-
-    start_state = frozenset([start_smd])
-    state_population = {start_state: smd_population[start_smd]}
-    queue = deque([start_state])
-    visited = {start_state}
-
-    best_state = start_state
-    best_deviation = abs(state_population[start_state] - target_population) / target_population
-
-    explored = 0
-    while queue and explored < max_states:
-        current_state = queue.popleft()
-        current_population = state_population[current_state]
-        explored += 1
-
-        current_deviation = abs(current_population - target_population) / target_population
-        if current_deviation < best_deviation:
-            best_state = current_state
-            best_deviation = current_deviation
-
-        if lower_bound <= current_population <= upper_bound:
-            return set(current_state), current_population
-
-        if current_population >= upper_bound:
-            continue
-
-        frontier = set()
-        for smd_id in current_state:
-            frontier.update(smd_adjacency.get(smd_id, set()))
-
-        for neighbor_smd in sorted(frontier):
-            if neighbor_smd not in available_smd_ids or neighbor_smd in current_state:
-                continue
-
-            new_state = frozenset(set(current_state) | {neighbor_smd})
-            if new_state in visited:
-                continue
-
-            new_population = current_population + smd_population[neighbor_smd]
-            visited.add(new_state)
-            state_population[new_state] = new_population
-            queue.append(new_state)
-
-    best_population = state_population[best_state]
-    best_deviation = abs(best_population - target_population) / target_population
-    if best_deviation <= population_tolerance:
-        return set(best_state), best_population
-
-    return None
-
-
-def _validate_mmd_plan(
-    mmd_plan: dict,
-    graph: Graph,
-    seat_vector: tuple[int, ...] | list[int],
-    population_tolerance: float,
-) -> tuple[bool, str]:
-    """Validate full-node coverage, seat accounting, and population bounds."""
-    expected_nodes = set(graph.nodes)
-    assigned_nodes = set(mmd_plan["assignment"].keys())
-    if assigned_nodes != expected_nodes:
-        return False, "Not all nodes are mapped in final MMD assignment"
-
-    expected_sorted = sorted(int(seat_count) for seat_count in seat_vector)
-    observed_sorted = sorted(int(d["seat_count"]) for d in mmd_plan["district_summaries"])
-    if observed_sorted != expected_sorted:
-        return False, "MMD seat vector does not match requested seat vector"
-
-    total_population = sum(int(graph.node_data(node)["population"]) for node in graph.nodes)
-    total_seats = sum(expected_sorted)
-    per_seat_population = total_population / total_seats
-
-    for district_summary in mmd_plan["district_summaries"]:
-        target_population = district_summary["seat_count"] * per_seat_population
-        observed_population = district_summary["population"]
-        deviation = abs(observed_population - target_population) / target_population
-        if deviation > population_tolerance:
-            return (
-                False,
-                (
-                    f"District {district_summary['district_id']} failed population bound: "
-                    f"target={target_population:,.0f}, observed={observed_population:,.0f}, "
-                    f"deviation={deviation:.4f}"
-                ),
-            )
-
-    return True, "ok"
-
-
-def _build_single_mmd_plan(
-    smd_assignment: dict,
-    graph: Graph,
-    seat_vector: tuple[int, ...] | list[int],
-    population_tolerance: float,
-    seed: int,
-) -> dict | None:
-    """Build a single MMD plan from one temporary-SMD assignment."""
-    seat_vector = [int(seat_count) for seat_count in seat_vector]
-    smd_units = _build_smd_unit_stats(smd_assignment, graph)
-    smd_adjacency = _build_smd_adjacency(smd_assignment, graph)
-
-    total_population = sum(unit["population"] for unit in smd_units.values())
-    total_seats = sum(seat_vector)
-    per_seat_population = total_population / total_seats
-    smd_population = {smd_id: unit["population"] for smd_id, unit in smd_units.items()}
-
-    available_smd_ids = set(smd_units.keys())
-    remaining_seat_targets = list(seat_vector)
-    rng = random.Random(seed)
-
-    smd_to_mmd = {}
-    district_summaries = []
-    next_mmd_id = 0
-
-    while remaining_seat_targets:
-        if not available_smd_ids:
-            return None
-
-        random_draw = rng.randint(0, 2**31 - 1)
-        seat_index = random_draw % len(remaining_seat_targets)
-        seat_count = remaining_seat_targets.pop(seat_index)
-
-        candidate_start_pool = sorted(available_smd_ids)
-        if not candidate_start_pool:
-            return None
-
-        start_smd = candidate_start_pool[random_draw % len(candidate_start_pool)]
-        candidate_merge = _find_bfs_merge_candidate(
-            start_smd=start_smd,
-            seat_count=seat_count,
-            available_smd_ids=available_smd_ids,
-            smd_adjacency=smd_adjacency,
-            smd_population=smd_population,
-            per_seat_population=per_seat_population,
-            population_tolerance=population_tolerance,
-        )
-
-        if candidate_merge is None:
-            shuffled_starts = candidate_start_pool[:]
-            rng.shuffle(shuffled_starts)
-
-            for alternate_start in shuffled_starts:
-                candidate_merge = _find_bfs_merge_candidate(
-                    start_smd=alternate_start,
-                    seat_count=seat_count,
-                    available_smd_ids=available_smd_ids,
-                    smd_adjacency=smd_adjacency,
-                    smd_population=smd_population,
-                    per_seat_population=per_seat_population,
-                    population_tolerance=population_tolerance,
-                )
-                if candidate_merge is not None:
-                    break
-
-        if candidate_merge is None:
-            return None
-
-        merged_smd_ids, merged_population = candidate_merge
-        merged_smd_ids = set(merged_smd_ids)
-
-        dem_votes = sum(smd_units[smd_id]["votes_dem"] for smd_id in merged_smd_ids)
-        rep_votes = sum(smd_units[smd_id]["votes_rep"] for smd_id in merged_smd_ids)
-
-        for smd_id in merged_smd_ids:
-            smd_to_mmd[smd_id] = next_mmd_id
-
-        district_summaries.append(
-            {
-                "district_id": next_mmd_id,
-                "seat_count": seat_count,
-                "smd_ids": sorted(merged_smd_ids),
-                "population": int(merged_population),
-                "votes_dem": int(dem_votes),
-                "votes_rep": int(rep_votes),
-            }
-        )
-
-        available_smd_ids -= merged_smd_ids
-        next_mmd_id += 1
-
-    if available_smd_ids:
-        return None
-
-    precinct_assignment = {}
-    for node_id, smd_id_raw in smd_assignment.items():
-        smd_id = int(smd_id_raw)
-        if smd_id not in smd_to_mmd:
-            return None
-        precinct_assignment[node_id] = smd_to_mmd[smd_id]
-
-    dem_seats = 0
-    for district_summary in district_summaries:
-        if district_summary["votes_dem"] > district_summary["votes_rep"]:
-            dem_seats += district_summary["seat_count"]
-
-    rep_seats = total_seats - dem_seats
-    return {
-        "results": {
-            "plan_id": -1,
-            "dem_seats": int(dem_seats),
-            "rep_seats": int(rep_seats),
-            "dem_seat_share": float(dem_seats / total_seats),
-            "total_seats": int(total_seats),
-        },
-        "assignment": precinct_assignment,
-        "district_summaries": district_summaries,
-    }
-
-
-def _mmd_plan_signature(mmd_plan: dict) -> tuple:
-    """Build a deterministic signature for deduplicating MMD plans."""
-    tuples = []
-    for district_summary in mmd_plan["district_summaries"]:
-        tuples.append(
-            (
-                int(district_summary["seat_count"]),
-                tuple(int(smd_id) for smd_id in district_summary["smd_ids"]),
-            )
-        )
-    return tuple(sorted(tuples))
-
-
-def generate_mmd_ensemble_from_smd_ensemble(
-    smd_ensemble: list[dict],
-    graph: Graph,
-    seat_vector: tuple[int, ...] | list[int],
-    plans_per_smd_plan: int = 5,
-    population_tolerance: float = 0.05,
-    seed: int = project_config.SEED,
-    max_attempts_per_smd_plan: int = 250,
-) -> list[dict]:
-    """Expand temporary SMD plans into MMD plans by contiguous BFS merging."""
-    if not seat_vector:
-        raise ValueError("seat_vector must be non-empty for MMD generation")
-
-    if any(int(seat_count) <= 0 for seat_count in seat_vector):
-        raise ValueError("seat_vector must contain only positive integers")
-
-    seat_vector = [int(seat_count) for seat_count in seat_vector]
-    mmd_ensemble = []
-    global_plan_id = 1
-    master_rng = random.Random(seed)
-
-    info("Converting temporary SMD plans into MMD plans.")
-    info(f"Requested seat vector: {seat_vector}")
-    info(f"MMD plans per SMD plan: {plans_per_smd_plan}")
-
-    for smd_plan_index, smd_plan in enumerate(smd_ensemble, start=1):
-        smd_assignment = smd_plan["assignment"]
-        generated_for_this_smd_plan = 0
-        attempts = 0
-        seen_signatures = set()
-
-        while (
-            generated_for_this_smd_plan < plans_per_smd_plan
-            and attempts < max_attempts_per_smd_plan
-        ):
-            attempts += 1
-            plan_seed = master_rng.randint(0, 2**31 - 1)
-            candidate_plan = _build_single_mmd_plan(
-                smd_assignment=smd_assignment,
-                graph=graph,
-                seat_vector=seat_vector,
-                population_tolerance=population_tolerance,
-                seed=plan_seed,
-            )
-
-            if candidate_plan is None:
-                continue
-
-            is_valid, reason = _validate_mmd_plan(
-                candidate_plan,
-                graph=graph,
-                seat_vector=seat_vector,
-                population_tolerance=population_tolerance,
-            )
-            if not is_valid:
-                continue
-
-            signature = _mmd_plan_signature(candidate_plan)
-            if signature in seen_signatures:
-                continue
-
-            seen_signatures.add(signature)
-            candidate_plan["results"]["plan_id"] = global_plan_id
-            candidate_plan["results"]["source_smd_plan_id"] = smd_plan["results"]["plan_id"]
-            mmd_ensemble.append(candidate_plan)
-            generated_for_this_smd_plan += 1
-            global_plan_id += 1
-
-        if generated_for_this_smd_plan < plans_per_smd_plan:
-            warn(
-                f"SMD plan {smd_plan_index}: generated "
-                f"{generated_for_this_smd_plan}/{plans_per_smd_plan} MMD plans "
-                f"after {attempts} attempts."
-            )
-        else:
-            info(
-                f"SMD plan {smd_plan_index}: generated "
-                f"{generated_for_this_smd_plan}/{plans_per_smd_plan} MMD plans."
-            )
-
-    success(f"Generated {len(mmd_ensemble)} total MMD plans.")
-    return mmd_ensemble
-
-
 def runtime_mode_settings(run_config: RunConfig) -> dict[str, int | str]:
-    """Compute mode-specific temporary SMD generation settings."""
+    """Validate the generation mode and return the plan and district counts for the run."""
     mode = run_config.generation_mode.strip().upper()
     if mode not in {"SMD", "MMD"}:
         raise ValueError("generation_mode must be either 'SMD' or 'MMD'")
 
-    if mode == "SMD":
-        smd_num_districts = run_config.num_districts
-        smd_num_plans = run_config.num_plans
-    else:
-        if not run_config.seat_vector:
-            raise ValueError("seat_vector must be non-empty when generation_mode='MMD'")
-
-        smd_num_districts = run_config.mmd_smd_multiplier * len(run_config.seat_vector)
-        smd_num_plans = max(1, run_config.num_plans // run_config.mmd_plans_per_smd_plan)
+    if mode == "MMD" and not run_config.seat_vector:
+        raise ValueError("seat_vector must be non-empty when generation_mode='MMD'")
 
     return {
         "mode": mode,
-        "smd_num_districts": smd_num_districts,
-        "smd_num_plans": smd_num_plans,
+        "num_districts": run_config.num_districts,
+        "num_plans": run_config.num_plans,
     }
 
 
@@ -646,19 +276,13 @@ def generate_ensemble_for_run(graph: Graph, run_config: RunConfig) -> list[dict]
     if mode_settings["mode"] == "MMD":
         from MMD_Generation_Layer.Processor.mmd_generation import generate_mmd_ensemble
 
-        if run_config.save_intermediate_smd_plans:
-            warn(
-                "save_intermediate_smd_plans is ignored: native MMD generation no longer builds "
-                "temporary SMD plans."
-            )
-
         ensemble, seed_record = generate_mmd_ensemble(graph, run_config)
         if run_config.save_seed_plan:
             save_seed_plan(seed_record, run_config.seed_plan_path)
         return ensemble
 
-    info(f"Temporary SMD count: {mode_settings['smd_num_districts']}")
-    info(f"Temporary SMD plans: {mode_settings['smd_num_plans']}")
+    info(f"Districts: {mode_settings['num_districts']}")
+    info(f"Plans: {mode_settings['num_plans']}")
 
     changed_mmd_settings = [
         key for key, default in MMD_ONLY_SETTING_DEFAULTS.items() if getattr(run_config, key) != default
@@ -669,16 +293,10 @@ def generate_ensemble_for_run(graph: Graph, run_config: RunConfig) -> list[dict]
             "and are ignored for this SMD run."
         )
 
-    if run_config.save_intermediate_smd_plans:
-        info(
-            "save_intermediate_smd_plans is ignored when generation_mode='SMD' "
-            "(it only applies to the temporary SMD plans built while generating MMD output)."
-        )
-
     return generate_baseline_ensemble(
         graph,
-        num_plans=int(mode_settings["smd_num_plans"]),
-        num_districts=int(mode_settings["smd_num_districts"]),
+        num_plans=int(mode_settings["num_plans"]),
+        num_districts=int(mode_settings["num_districts"]),
         seed=run_config.seed,
         population_tolerance=run_config.population_tolerance,
     )

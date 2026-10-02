@@ -7,8 +7,9 @@
   "id_column": "UNIQUE_ID",
   "geom_column": "the_geom",
   "population_tolerance": 0.05,
-  "notes": "Primary MMD scenario using the seat vector discussed in the thread.",
-  "expected_behavior": "Should build a 5/5/4 seed plan and save 100 native MultiMemberReCom plans.",
+  "mmd_plans_per_smd_plan": 5,
+  "notes": "mmd_plans_per_smd_plan was removed with the temporary-SMD workflow.",
+  "expected_behavior": "load_run_config should raise ValueError naming mmd_plans_per_smd_plan as removed in the GerryChain 1.0.0 migration.",
   "seat_vector": [
     5,
     5,

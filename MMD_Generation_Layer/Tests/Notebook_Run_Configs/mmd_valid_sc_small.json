@@ -7,10 +7,11 @@
   "id_column": "UNIQUE_ID",
   "geom_column": "geometry",
   "population_tolerance": 0.05,
-  "mmd_smd_multiplier": 7,
-  "mmd_plans_per_smd_plan": 2,
-  "max_mmd_attempts_per_smd_plan": 15,
   "notes": "Small quick-run MMD scenario for South Carolina using a compact seat vector.",
-  "expected_behavior": "Should attempt 2 MMD plans per temporary SMD plan and save a small valid South Carolina MMD ensemble.",
-  "seat_vector": [3, 2, 2]
+  "expected_behavior": "Should build a 3/2/2 seed plan and save a small valid South Carolina MMD ensemble of 6 plans.",
+  "seat_vector": [
+    3,
+    2,
+    2
+  ]
 }

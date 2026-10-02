@@ -241,6 +241,7 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `max_seed_attempts`: positive integer.
     - `save_seed_plan`: boolean; `RunConfig.seed_plan_path` is where the seed plan is written.
   - In `MMD` mode, `seat_vector` must contain at least 2 districts.
+  - `REMOVED_RUN_CONFIG_KEYS` (`mmd_smd_multiplier`, `mmd_plans_per_smd_plan`, `max_mmd_attempts_per_smd_plan`, `save_intermediate_smd_plans`) are rejected in either mode with a GerryChain 1.0.0 migration message.
   - Classes:
     - `RunConfig`
     - `DashboardRunMetadata`
@@ -258,7 +259,6 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `describe_run_config(run_config)`
 - `MMD_Generation_Layer/Processor/generation_logic.py`
   - Graph loading, SMD generation, and the SMD/MMD run dispatcher. `MMD` runs are delegated to `mmd_generation.generate_mmd_ensemble(...)`, and the seed plan is saved when `save_seed_plan` is true.
-  - The temporary-SMD-to-MMD helpers (`_build_smd_unit_stats` through `generate_mmd_ensemble_from_smd_ensemble`) are no longer called by the run pipeline.
   - `SMD` runs log an `info(...)` message when any MMD-only setting (`MMD_ONLY_SETTING_DEFAULTS`) differs from its default, since those settings are ignored.
   - `log_captured_warnings()` routes Python warnings (for example GerryChain polygon-overlap and bipartition warnings) through `warn(...)`, once per distinct message.
   - Uses the GerryChain 1.0.0 graph API: node attributes via `graph.node_data(node)[key]`; `graph.nodes` and `graph.edges` are properties, not methods.
@@ -270,14 +270,7 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `assignment_by_original_node_id(partition)`
     - `create_initial_partition(graph, num_districts=NUM_DISTRICTS, seed=SEED, population_tolerance=0.05, rng=None)`
     - `generate_baseline_ensemble(graph, num_plans=NUM_PLANS, num_districts=NUM_DISTRICTS, seed=SEED, population_tolerance=0.05)`
-    - `_build_smd_unit_stats(smd_assignment, graph)`
-    - `_build_smd_adjacency(smd_assignment, graph)`
-    - `_find_bfs_merge_candidate(...)`
-    - `_validate_mmd_plan(mmd_plan, graph, seat_vector, population_tolerance)`
-    - `_build_single_mmd_plan(smd_assignment, graph, seat_vector, population_tolerance, seed)`
-    - `_mmd_plan_signature(mmd_plan)`
-    - `generate_mmd_ensemble_from_smd_ensemble(...)`
-    - `runtime_mode_settings(run_config)`
+    - `runtime_mode_settings(run_config)` (validates the mode; returns `mode`, `num_districts`, `num_plans`)
     - `generate_ensemble_for_run(graph, run_config)`
 - `MMD_Generation_Layer/Processor/mmd_generation.py`
   - Native GerryChain 1.0.0 multimember-district generation used by `MMD` runs.
@@ -333,6 +326,7 @@ This file must be updated after **every LLM-authored code change** so the docume
   - `mmd_valid_balanced.json`, `mmd_valid_high_variance.json`, `mmd_valid_seat_vector_alias.json`: valid MMD scenarios using `seat_vector`.
   - `mmd_edge_strict_tolerance.json`, `mmd_edge_low_attempt_budget.json`: valid edge-case stress scenarios.
   - `mmd_valid_chain_controls_tn_small.json`: valid Tennessee scenario setting every native-chain control to a non-default value.
+  - `invalid_removed_mmd_smd_multiplier.json`, `invalid_removed_mmd_plans_per_smd_plan.json`, `invalid_removed_max_mmd_attempts_per_smd_plan.json`, `invalid_removed_save_intermediate_smd_plans.json`, `invalid_removed_save_intermediate_smd_plans_smd.json`: removed temporary-SMD keys, rejected in `MMD` and `SMD` mode.
   - `invalid_recom_variant.json`, `invalid_negative_burn_in_steps.json`, `invalid_zero_step_interval.json`, `invalid_zero_max_seed_attempts.json`, `invalid_non_bool_save_seed_plan.json`, `invalid_single_district_seat_vector.json`: invalid native-chain control fixtures.
   - `invalid_mode.json`, `invalid_negative_tolerance.json`, `invalid_tolerance_gt_one.json`, `invalid_empty_mmd_seat_vector.json`, `invalid_nonpositive_mmd_seat_vector.json`, `invalid_null_mmd_seat_vector.json`, `invalid_unknown_key.json`, `invalid_conflicting_seat_vectors.json`, `invalid_seat_vector_sum_mismatch.json`: invalid-input fixtures intended to raise fast validation errors (including legacy key rejection, bad `seat_vector` content, and seat-sum mismatch checks).
 
@@ -559,7 +553,7 @@ This file must be updated after **every LLM-authored code change** so the docume
 - `MMD_Generation_Layer/config.py`
   - `base_dir`, `processor_dir`, `shape_path`, `output_dir`, `plans_dir`, `ensemble_csv_path`, `seat_share_png_path`, `seed_plan_path`, `NUM_PLANS`, `NUM_DISTRICTS`, `ID_COLUMN`, `GEOM_COLUMN`, `SEED`, `RECOM_VARIANT`, `BURN_IN_STEPS`, `STEP_INTERVAL`, `MAX_SEED_ATTEMPTS`, `SAVE_SEED_PLAN`
 - `MMD_Generation_Layer/Processor/runtime_setup.py`
-  - `RUN_CONFIG_ALLOWED_KEYS`, `VALID_RECOM_VARIANTS`
+  - `RUN_CONFIG_ALLOWED_KEYS`, `REMOVED_RUN_CONFIG_KEYS`, `VALID_RECOM_VARIANTS`
 - `MMD_Generation_Layer/Processor/generation_logic.py`
   - `MMD_ONLY_SETTING_DEFAULTS`
 - `MMD_Generation_Layer/Processor/mmd_generation.py`

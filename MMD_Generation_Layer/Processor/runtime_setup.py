@@ -25,10 +25,6 @@ RUN_CONFIG_ALLOWED_KEYS = {
     "population_tolerance",
     "seat_vector",
     "mmd_seat_vector",
-    "mmd_smd_multiplier",
-    "mmd_plans_per_smd_plan",
-    "max_mmd_attempts_per_smd_plan",
-    "save_intermediate_smd_plans",
     "recom_variant",
     "burn_in_steps",
     "step_interval",
@@ -37,6 +33,14 @@ RUN_CONFIG_ALLOWED_KEYS = {
     "expected_behavior",
     "notes",
 }
+
+# Keys from the temporary-SMD-to-MMD workflow replaced by native GerryChain 1.0.0 generation.
+REMOVED_RUN_CONFIG_KEYS = (
+    "mmd_smd_multiplier",
+    "mmd_plans_per_smd_plan",
+    "max_mmd_attempts_per_smd_plan",
+    "save_intermediate_smd_plans",
+)
 
 VALID_RECOM_VARIANTS = (
     "district_pairs_mst",
@@ -61,11 +65,7 @@ class RunConfig:
     dem_column: str
     rep_column: str
     seat_vector: tuple[int, ...]
-    mmd_smd_multiplier: int
-    mmd_plans_per_smd_plan: int
     population_tolerance: float
-    max_mmd_attempts_per_smd_plan: int
-    save_intermediate_smd_plans: bool
     recom_variant: str
     burn_in_steps: int
     step_interval: int
@@ -73,7 +73,6 @@ class RunConfig:
     save_seed_plan: bool
     output_dir: Path
     plans_dir: Path
-    intermediate_smd_plans_dir: Path
     ensemble_csv_path: Path
     seat_share_png_path: Path
     seed_plan_path: Path
@@ -143,11 +142,7 @@ def default_run_config() -> RunConfig:
         dem_column=project_config.DEM_COLUMN,
         rep_column=project_config.REP_COLUMN,
         seat_vector=project_config.SEAT_VECTOR,
-        mmd_smd_multiplier=project_config.MMD_SMD_MULTIPLIER,
-        mmd_plans_per_smd_plan=project_config.MMD_PLANS_PER_SMD_PLAN,
         population_tolerance=project_config.POPULATION_TOLERANCE,
-        max_mmd_attempts_per_smd_plan=project_config.MAX_MMD_ATTEMPTS_PER_SMD_PLAN,
-        save_intermediate_smd_plans=project_config.SAVE_INTERMEDIATE_SMD_PLANS,
         recom_variant=project_config.RECOM_VARIANT,
         burn_in_steps=project_config.BURN_IN_STEPS,
         step_interval=project_config.STEP_INTERVAL,
@@ -155,7 +150,6 @@ def default_run_config() -> RunConfig:
         save_seed_plan=project_config.SAVE_SEED_PLAN,
         output_dir=project_config.output_dir,
         plans_dir=project_config.plans_dir,
-        intermediate_smd_plans_dir=project_config.intermediate_smd_plans_dir,
         ensemble_csv_path=project_config.ensemble_csv_path,
         seat_share_png_path=project_config.seat_share_png_path,
         seed_plan_path=project_config.seed_plan_path,
@@ -221,6 +215,13 @@ def validate_run_config(config: dict[str, Any], base_config: RunConfig | None = 
     """Validate JSON config before applying it to runtime values."""
     base_config = base_config or default_run_config()
 
+    for key in REMOVED_RUN_CONFIG_KEYS:
+        if key in config:
+            raise ValueError(
+                f"{key} was removed in the GerryChain 1.0.0 migration; MMD plans are now generated "
+                "natively from an auto-built seed plan"
+            )
+
     unknown_keys = sorted(set(config) - RUN_CONFIG_ALLOWED_KEYS)
     if unknown_keys:
         raise ValueError(f"Unsupported config keys: {unknown_keys}")
@@ -229,14 +230,7 @@ def validate_run_config(config: dict[str, Any], base_config: RunConfig | None = 
     if mode not in {"SMD", "MMD"}:
         raise ValueError("generation_mode must be 'SMD' or 'MMD'")
 
-    for key in [
-        "num_plans",
-        "num_districts",
-        "seed",
-        "mmd_smd_multiplier",
-        "mmd_plans_per_smd_plan",
-        "max_mmd_attempts_per_smd_plan",
-    ]:
+    for key in ["num_plans", "num_districts", "seed"]:
         if key in config:
             value = config[key]
             if not isinstance(value, int) or value <= 0:
@@ -256,9 +250,8 @@ def validate_run_config(config: dict[str, Any], base_config: RunConfig | None = 
     if "recom_variant" in config and config["recom_variant"] not in VALID_RECOM_VARIANTS:
         raise ValueError(f"recom_variant must be one of {list(VALID_RECOM_VARIANTS)}")
 
-    for key in ["save_intermediate_smd_plans", "save_seed_plan"]:
-        if key in config and not isinstance(config[key], bool):
-            raise ValueError(f"{key} must be a boolean")
+    if "save_seed_plan" in config and not isinstance(config["save_seed_plan"], bool):
+        raise ValueError("save_seed_plan must be a boolean")
 
     if "population_tolerance" in config:
         tolerance = config["population_tolerance"]
@@ -308,23 +301,7 @@ def apply_run_config(
         dem_column=str(config.get("dem_column", base_config.dem_column)),
         rep_column=str(config.get("rep_column", base_config.rep_column)),
         seat_vector=seat_vector,
-        mmd_smd_multiplier=int(config.get("mmd_smd_multiplier", base_config.mmd_smd_multiplier)),
-        mmd_plans_per_smd_plan=int(
-            config.get("mmd_plans_per_smd_plan", base_config.mmd_plans_per_smd_plan)
-        ),
         population_tolerance=float(config.get("population_tolerance", base_config.population_tolerance)),
-        max_mmd_attempts_per_smd_plan=int(
-            config.get(
-                "max_mmd_attempts_per_smd_plan",
-                base_config.max_mmd_attempts_per_smd_plan,
-            )
-        ),
-        save_intermediate_smd_plans=bool(
-            config.get(
-                "save_intermediate_smd_plans",
-                base_config.save_intermediate_smd_plans,
-            )
-        ),
         recom_variant=str(config.get("recom_variant", base_config.recom_variant)),
         burn_in_steps=int(config.get("burn_in_steps", base_config.burn_in_steps)),
         step_interval=int(config.get("step_interval", base_config.step_interval)),
@@ -332,7 +309,6 @@ def apply_run_config(
         save_seed_plan=bool(config.get("save_seed_plan", base_config.save_seed_plan)),
         output_dir=base_config.output_dir,
         plans_dir=base_config.plans_dir,
-        intermediate_smd_plans_dir=base_config.intermediate_smd_plans_dir,
         ensemble_csv_path=base_config.ensemble_csv_path,
         seat_share_png_path=base_config.seat_share_png_path,
         seed_plan_path=base_config.seed_plan_path,
@@ -377,7 +353,6 @@ def describe_run_config(run_config: RunConfig) -> None:
     info(f"seed: {run_config.seed}")
     info(f"population_tolerance: {run_config.population_tolerance}")
     info(f"seat_vector: {list(run_config.seat_vector)}")
-    info(f"save_intermediate_smd_plans: {run_config.save_intermediate_smd_plans}")
     info(f"recom_variant: {run_config.recom_variant}")
     info(f"burn_in_steps: {run_config.burn_in_steps}")
     info(f"step_interval: {run_config.step_interval}")

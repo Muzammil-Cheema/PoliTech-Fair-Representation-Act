@@ -21,7 +21,7 @@ Current implementation:
 - Uses shared MMD config in `MMD_Generation_Layer/config.py`.
 - Writes baseline plan summaries to `MMD_Generation_Layer/Outputs/baseline_ensemble.csv`.
 - Writes precinct-to-district assignment JSON files to `MMD_Generation_Layer/Outputs/Plan_Assignments/`.
-- Optionally writes the temporary SMD plans used to build MMD output to `MMD_Generation_Layer/Outputs/Intermediate_SMD_Plans/` when `save_intermediate_smd_plans` is set (debugging/inspection aid, off by default; see below).
+- Optionally writes the auto-built MMD seed plan to `MMD_Generation_Layer/Outputs/seed_plan.json` when `save_seed_plan` is set (off by default; see below).
 - Writes the resolved run config (`shape_path`, `num_districts`, `num_plans`, `id_column`, `geom_column`) to `MMD_Generation_Layer/Outputs/run_metadata.json` after each run.
 - Provides a Streamlit dashboard in `MMD_Generation_Layer/Client/baseline_dashboard.py` that reads `run_metadata.json` to resolve which state's shapefile/config to render, falling back to `config.py`'s NC defaults if no metadata file is present.
 
@@ -83,7 +83,9 @@ Important config rules:
 - In `MMD` mode, `seat_vector` must be a non-empty list of positive integers.
 - Legacy `mmd_seat_vector` is intentionally rejected with a clear error.
 - The loader is strict and raises errors on unknown keys.
-- `save_intermediate_smd_plans` (bool, default `false`) only changes behavior in `MMD` mode: when `true`, it writes the temporary SMD plans used to build MMD output as JSON to `MMD_Generation_Layer/Outputs/Intermediate_SMD_Plans/` (`smd_plan_<id>.json`, one per temporary SMD plan), without changing the normal MMD `Plan_Assignments` output. In `SMD` mode the flag is accepted but explicitly ignored: the run logs an info message noting it has no effect and does not create the directory.
+- In `MMD` mode, `seat_vector` must contain at least 2 districts.
+- `mmd_smd_multiplier`, `mmd_plans_per_smd_plan`, `max_mmd_attempts_per_smd_plan`, and `save_intermediate_smd_plans` were removed in the GerryChain 1.0.0 migration and are rejected with a clear error; delete them from older configs.
+- `recom_variant` (default `district_pairs_mst`), `burn_in_steps` (default `0`), `step_interval` (default `1`), `max_seed_attempts` (default `10`), and `save_seed_plan` (default `false`) control native `MMD` generation and are ignored in `SMD` mode.
 
 ## Best-Practice Structure
 
@@ -176,7 +178,7 @@ Current verified test state:
 
 ### Global constants
 
-- `MMD_Generation_Layer/config.py`: `base_dir`, `processor_dir`, `shape_path`, `output_dir`, `plans_dir`, `intermediate_smd_plans_dir`, `ensemble_csv_path`, `seat_share_png_path`, `NUM_PLANS`, `NUM_DISTRICTS`, `ID_COLUMN`, `GEOM_COLUMN`, `SEED`, `SAVE_INTERMEDIATE_SMD_PLANS`
+- `MMD_Generation_Layer/config.py`: `base_dir`, `processor_dir`, `shape_path`, `output_dir`, `plans_dir`, `ensemble_csv_path`, `seat_share_png_path`, `seed_plan_path`, `NUM_PLANS`, `NUM_DISTRICTS`, `ID_COLUMN`, `GEOM_COLUMN`, `SEED`, `RECOM_VARIANT`, `BURN_IN_STEPS`, `STEP_INTERVAL`, `MAX_SEED_ATTEMPTS`, `SAVE_SEED_PLAN`
 - `Global_Utilities/json_io.py`: `PROJECT_ROOT`, `PIPE_DIR_NAME`
 - `Global_Utilities/logger.py`: `RESET`, `BLUE`, `GREEN`, `RED`, `YELLOW`
 - `Simulation_Layer/Core/config.py`: `MODE_SINGLE_SEAT_RCV`, `MODE_MULTI_SEAT_STV`, `VALID_MODES`, `DEFAULT_TRANSFER_VALUE`, `DEFAULT_ENCODING`
