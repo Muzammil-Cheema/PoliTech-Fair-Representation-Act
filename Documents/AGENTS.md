@@ -320,6 +320,18 @@ This file must be updated after **every LLM-authored code change** so the docume
   - `seat_share.png`: notebook-generated Democratic seat-share histogram.
   - `democratic_seats.png`: dashboard-generated Democratic seat-count histogram.
   - `Plan_Assignments/plan_*.json`: precinct ID to district ID assignment maps.
+- `MMD_Generation_Layer/Tests/`
+  - Pytest suite for the MMD layer. Every module except `test_mmd_run_config.py` starts with `pytest.importorskip("gerrychain")`, so installs without the `mmd` extra skip them. Graph-based tests use small synthetic grids keyed by string precinct IDs (like real shapefiles) with varied populations, because perfectly uniform grids make tight-tolerance seat-proportional cuts artificially rare.
+  - `test_graph_loading.py`: `load_and_build_graph(...)` builds a precinct graph from a tiny shapefile and sets `population`, `votes_dem`, and `votes_rep` through the GerryChain 1.0.0 graph API.
+    - Helper: `write_two_by_two_precincts(path) -> Path`
+  - `test_smd_generation.py`: SMD ReCom path returns the requested plans keyed by original precinct IDs and is reproducible for a fixed seed.
+    - Helper: `build_grid_graph(width=8, height=8) -> Graph`
+  - `test_mmd_seed.py`: seed plans are seat-proportional across seat vectors and tolerances, reproducible for a fixed RNG seed, reject one-district seat vectors, carry tallies, and fail with a clear error after the attempt budget; `validate_mmd_partition(...)` rejects non-contiguous districts, mismatched labels, and out-of-tolerance populations.
+    - Helpers: `build_grid_graph(rows=16, cols=16, uniform_population=None) -> Graph`, `column_partition(graph, district_for_column) -> Partition`, `seat_populations(graph, assignment, seat_vector) -> dict[int, float]`
+  - `test_mmd_chain.py`: `generate_mmd_ensemble(...)` saves exactly `num_plans` valid plans, applies burn-in/step-interval arithmetic, keeps seat counts on labels, keeps the plan and seed record shapes, is reproducible, runs all four `recom_variant`s; `generate_ensemble_for_run(...)` writes `seed_plan.json` only when `save_seed_plan` is true.
+    - Helpers: `build_grid_graph(rows=16, cols=16) -> Graph`, `mmd_run_config(**overrides) -> RunConfig`, `plan_partition(graph, plan) -> Partition`; module-scoped `graph` fixture.
+  - `test_mmd_run_config.py`: every non-`invalid_*` fixture in `Notebook_Run_Configs/` loads and every `invalid_*` fixture raises; checks chain-control defaults and overrides, each validation message, removed temporary-SMD key rejection in both modes, and that `RunConfig` has no temporary-SMD fields.
+    - Helper: `mmd_config(**overrides) -> dict`
 - `MMD_Generation_Layer/Tests/Notebook_Run_Configs/`
   - JSON run configs loadable in the notebook via `load_run_config(...)`.
   - `smd_valid_baseline.json`, `smd_valid_small_debug.json`: valid SMD scenarios.
@@ -577,6 +589,7 @@ This file must be updated after **every LLM-authored code change** so the docume
 - Test-only globals:
   - `Representational_Layer/Tests/test_input_contract.py`: `FIXTURE_DIR`
   - `Representational_Layer/Tests/test_json_io.py`: `PROJECT_ROOT`
+  - `MMD_Generation_Layer/Tests/test_mmd_run_config.py`: `FIXTURE_DIR`, `VALID_FIXTURES`, `INVALID_FIXTURES`
   - `Simulation_Layer/Tests/acceptance_helpers.py`: `PROJECT_ROOT`, `SIMULATION_ROOT`, `CASE_DIR`, `ACCEPTANCE_REPLAY_RUNS`, `REQUIRED_ELECTION_FIELDS`, `ANSI_ESCAPE_RE`, `DEFAULT_TEST_TRANSFER_VALUE`
 
 ## Import Path Guidance
