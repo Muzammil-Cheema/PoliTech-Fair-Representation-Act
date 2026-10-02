@@ -78,7 +78,7 @@ This file must be updated after **every LLM-authored code change** so the docume
 - `python -m pip install -e '.[mmd]'`
   - Install MMD geospatial, notebook, and Streamlit dependencies.
 - `jupyter notebook MMD_Generation_Layer/Processor/main.ipynb`
-  - Open the MMD notebook workflow.
+  - Open the legacy MMD notebook. It predates GerryChain 1.0.0 and no longer runs; use the script entrypoint below.
 - `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q`
   - Run all configured tests from the repository root.
 - `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q MMD_Generation_Layer/Tests`
@@ -149,7 +149,7 @@ This file must be updated after **every LLM-authored code change** so the docume
   - Generates and visualizes baseline district-plan ensembles from geographic data.
   - `SMD` mode uses equal-population ReCom.
   - Script-based `MMD` mode builds a seat-proportional base MMD seed plan at runtime and generates FRA-style multimember district plans with GerryChain 1.0.0's native `MultiMemberReCom`, keeping each district's seat count fixed. The legacy notebook still contains the older temporary-SMD-to-MMD workflow.
-  - Produces usable FRA multimember district artifacts, but still needs better proposal strategies and efficiency work before large-scale use.
+  - Research-grade sampling settings (`recom_variant`, `burn_in_steps`, `step_interval`) still need to be chosen from full-size runs.
   - Current runs pair 2020 Census population figures with 2024 voting data, so downstream analysis should keep that temporal mismatch in mind.
 - `MMD_Generation_Layer/config.py`
   - Directories and paths:
@@ -162,23 +162,22 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `seat_share_png_path`
     - `seed_plan_path`
   - Global constants:
+    - `GENERATION_MODE`
     - `NUM_PLANS`
     - `NUM_DISTRICTS`
     - `ID_COLUMN`
     - `GEOM_COLUMN`
+    - `POP_COLUMN`, `DEM_COLUMN`, `REP_COLUMN`
     - `SEED`
+    - `SEAT_VECTOR`
+    - `POPULATION_TOLERANCE`
     - `RECOM_VARIANT`, `BURN_IN_STEPS`, `STEP_INTERVAL`, `MAX_SEED_ATTEMPTS`, `SAVE_SEED_PLAN`: native multimember chain defaults (`"district_pairs_mst"`, `0`, `1`, `10`, `False`).
-- `MMD_Generation_Layer/Data/Shapefiles/NC/`
-  - North Carolina shapefile sidecar files:
-    - `nc_2024_with_population.shp`
-    - `nc_2024_with_population.shx`
-    - `nc_2024_with_population.dbf`
-    - `nc_2024_with_population.prj`
-    - `nc_2024_with_population.cpg`
+- `MMD_Generation_Layer/Data/Shapefiles/<STATE>/`
+  - 2024 precinct shapefiles with reconstructed population for `NC` (default), `SC`, `TN`, and `VA`: `<state>_2024_with_population.shp` plus `.shx`, `.dbf`, `.prj`, and `.cpg` sidecar files.
 - `MMD_Generation_Layer/__init__.py`
   - Package marker for the MMD generation layer.
 - `MMD_Generation_Layer/Processor/main.ipynb`
-  - Notebook-driven GerryChain/ReCom pipeline plus current FRA multimember generation workflow.
+  - Legacy notebook prototype of the MMD layer. It uses the GerryChain 0.3.2 graph API and the removed temporary-SMD-to-MMD workflow, so it does not run under GerryChain 1.0.0; a notice cell at the top says so. The entries below describe its notebook-local code, not the script modules.
   - Runtime controls in notebook state cell:
     - `RUN_DEFAULTS` (snapshot of defaults sourced from `MMD_Generation_Layer/config.py` plus notebook-only controls)
     - `GENERATION_MODE` (`"SMD"` or `"MMD"`)
@@ -550,20 +549,20 @@ This file must be updated after **every LLM-authored code change** so the docume
 
 ## MMD Layer Limitations
 
-- Current code remains notebook-heavy and is not yet a stabilized package API for MMD generation.
+- The script modules in `MMD_Generation_Layer/Processor/` are the supported MMD workflow; the legacy notebook does not run under GerryChain 1.0.0.
+- An invalid run config logs the validation error and falls back to `config.py` defaults (NC) instead of stopping the run.
 - Script-based `MMD` generation uses GerryChain 1.0.0's native `MultiMemberReCom`; burn-in and thinning (`burn_in_steps`, `step_interval`) default to keeping every chain step, so tune them for statistically independent ensembles.
 - MMD seat counts in summaries are winner-take-all per multimember district, which is a display rule, not proportional FRA/STV allocation.
 - Current checked-in MMD outputs may be stale relative to `NUM_DISTRICTS = 14`; verify outputs before relying on them for analysis.
 - Current MMD outputs do not yet create representational-layer `District` objects.
 - Current MMD outputs do not yet feed simulation-layer election JSON directly.
-- Current MMD mode still needs extraction into reusable modules before API hardening.
 
 ## Global Constants Inventory
 
 - `Global_Utilities/json_io.py`
   - `PROJECT_ROOT`, `PIPE_DIR_NAME`
 - `MMD_Generation_Layer/config.py`
-  - `base_dir`, `processor_dir`, `shape_path`, `output_dir`, `plans_dir`, `ensemble_csv_path`, `seat_share_png_path`, `seed_plan_path`, `NUM_PLANS`, `NUM_DISTRICTS`, `ID_COLUMN`, `GEOM_COLUMN`, `SEED`, `RECOM_VARIANT`, `BURN_IN_STEPS`, `STEP_INTERVAL`, `MAX_SEED_ATTEMPTS`, `SAVE_SEED_PLAN`
+  - `base_dir`, `processor_dir`, `shape_path`, `output_dir`, `plans_dir`, `ensemble_csv_path`, `seat_share_png_path`, `seed_plan_path`, `GENERATION_MODE`, `NUM_PLANS`, `NUM_DISTRICTS`, `ID_COLUMN`, `GEOM_COLUMN`, `POP_COLUMN`, `DEM_COLUMN`, `REP_COLUMN`, `SEED`, `SEAT_VECTOR`, `POPULATION_TOLERANCE`, `RECOM_VARIANT`, `BURN_IN_STEPS`, `STEP_INTERVAL`, `MAX_SEED_ATTEMPTS`, `SAVE_SEED_PLAN`
 - `MMD_Generation_Layer/Processor/runtime_setup.py`
   - `RUN_CONFIG_ALLOWED_KEYS`, `REMOVED_RUN_CONFIG_KEYS`, `VALID_RECOM_VARIANTS`
 - `MMD_Generation_Layer/Processor/generation_logic.py`
