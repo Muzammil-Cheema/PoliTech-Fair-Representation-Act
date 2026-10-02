@@ -7,11 +7,8 @@
   "id_column": "UNIQUE_ID",
   "geom_column": "the_geom",
   "population_tolerance": 0.01,
-  "mmd_smd_multiplier": 10,
-  "mmd_plans_per_smd_plan": 5,
-  "max_mmd_attempts_per_smd_plan": 400,
   "notes": "Valid but intentionally strict tolerance stress test.",
-  "expected_behavior": "May produce partial plan sets or zero valid plans depending on merge feasibility.",
+  "expected_behavior": "Seed plan and every chain plan must keep each district within 1% per seat; seed building may need retries.",
   "seat_vector": [
     5,
     5,
