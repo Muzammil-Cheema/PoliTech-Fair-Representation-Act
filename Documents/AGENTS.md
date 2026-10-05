@@ -306,6 +306,7 @@ This file must be updated after **every LLM-authored code change** so the docume
 - `MMD_Generation_Layer/Client/baseline_dashboard.py`
   - Streamlit dashboard for existing baseline outputs.
   - Reads all run-specific values and artifact paths through `DashboardRunMetadata` rather than importing path values directly from `config.py`.
+  - Reloads `baseline_ensemble.csv` on every dashboard rerun so overwritten outputs update plan choices and statistics; shapefile loading remains cached.
   - Functions:
     - `load_ensemble_results(csv_path: str) -> pd.DataFrame`
     - `load_shapefile(shape_path: str, id_col: str = ID_COLUMN) -> gpd.GeoDataFrame`
@@ -313,7 +314,7 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `create_district_map(...)`
     - `plot_baseline_histogram(results_df: pd.DataFrame, output_dir: Path)`
     - `main()`
-- `MMD_Generation_Layer/Outputs/`
+- `MMD_Generation_Layer/Outputs/<STATE>/` (one folder per state, named after the shapefile directory; `RunConfig` output paths resolve here)
   - `baseline_ensemble.csv`: summary rows with `plan_id`, `dem_seats`, `rep_seats`, and `dem_seat_share`; `MMD` runs also include `total_seats` and `chain_step`.
   - `seed_plan.json`: optional `MMD` seed plan (`seat_vector`, `members_per_district`, `assignment`), written when `save_seed_plan` is true.
   - `seat_share.png`: notebook-generated Democratic seat-share histogram.
