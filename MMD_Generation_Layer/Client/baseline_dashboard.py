@@ -31,9 +31,8 @@ st.set_page_config(
 )
 
 
-@st.cache_data
 def load_ensemble_results(csv_path: str) -> pd.DataFrame:
-    """Load baseline ensemble results CSV."""
+    """Read current ensemble results CSV on every dashboard rerun."""
     return pd.read_csv(csv_path)
 
 

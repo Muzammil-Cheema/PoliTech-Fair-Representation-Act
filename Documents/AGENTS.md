@@ -279,6 +279,7 @@ This file must be updated after **every LLM-authored code change** so the docume
 - `MMD_Generation_Layer/Client/baseline_dashboard.py`
   - Streamlit dashboard for existing baseline outputs.
   - Reads all run-specific values and artifact paths through `DashboardRunMetadata` rather than importing path values directly from `config.py`.
+  - Reloads `baseline_ensemble.csv` on every dashboard rerun so overwritten outputs update plan choices and statistics; shapefile loading remains cached.
   - Functions:
     - `load_ensemble_results(csv_path: str) -> pd.DataFrame`
     - `load_shapefile(shape_path: str, id_col: str = ID_COLUMN) -> gpd.GeoDataFrame`
