@@ -8,6 +8,6 @@
   "geom_column": "the_geom",
   "population_tolerance": 0.05,
   "save_intermediate_smd_plans": true,
-  "notes": "SMD run with save_intermediate_smd_plans incorrectly left on.",
-  "expected_behavior": "Should complete normally and log an info message that save_intermediate_smd_plans is ignored in SMD mode; no Intermediate_SMD_Plans directory or files should be written."
+  "notes": "save_intermediate_smd_plans was removed; it is rejected in SMD mode too.",
+  "expected_behavior": "load_run_config should raise ValueError naming save_intermediate_smd_plans as removed in the GerryChain 1.0.0 migration."
 }

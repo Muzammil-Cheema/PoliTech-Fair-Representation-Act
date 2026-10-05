@@ -7,8 +7,9 @@
   "id_column": "UNIQUE_ID",
   "geom_column": "geometry",
   "population_tolerance": 0.05,
-  "notes": "Small quick-run MMD scenario for Tennessee using a compact seat vector.",
-  "expected_behavior": "Should build a 3/3/3 seed plan and save a small valid Tennessee MMD ensemble of 20 plans.",
+  "save_seed_plan": "yes",
+  "notes": "save_seed_plan must be a JSON boolean.",
+  "expected_behavior": "load_run_config should raise ValueError for a non-boolean save_seed_plan.",
   "seat_vector": [
     3,
     3,

@@ -7,8 +7,9 @@
   "id_column": "UNIQUE_ID",
   "geom_column": "geometry",
   "population_tolerance": 0.05,
-  "notes": "Small quick-run MMD scenario for Tennessee using a compact seat vector.",
-  "expected_behavior": "Should build a 3/3/3 seed plan and save a small valid Tennessee MMD ensemble of 20 plans.",
+  "burn_in_steps": -1,
+  "notes": "burn_in_steps must be zero or a positive integer.",
+  "expected_behavior": "load_run_config should raise ValueError for negative burn_in_steps.",
   "seat_vector": [
     3,
     3,

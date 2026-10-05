@@ -19,8 +19,10 @@ This thread is not the owner of the representational or simulation logic, except
 This thread should treat the following as its main area of responsibility:
 
 - `MMD_Generation_Layer/config.py`
-- `MMD_Generation_Layer/Processor/main.ipynb`
+- `MMD_Generation_Layer/Processor/` script modules (`main.py`, `runtime_setup.py`, `generation_logic.py`, `mmd_generation.py`, `output_artifacts.py`)
+- `MMD_Generation_Layer/Tests/` (pytest suite and `Notebook_Run_Configs/` fixtures)
 - `MMD_Generation_Layer/Client/baseline_dashboard.py`
+- `MMD_Generation_Layer/Processor/main.ipynb` (legacy; see below)
 - MMD-related package setup in `pyproject.toml`
 - MMD-related environment and import cleanup in the repo venv
 
@@ -47,6 +49,16 @@ Key fixes:
 - updated `MMD_Generation_Layer/Processor/main.ipynb` to use `%pip install -e "../..[mmd]"` and package-qualified config imports
 - cleaned stale editable-install contamination from `.venv` and reinstalled the project from the correct repo path
 
+## GerryChain 1.0.0 Native MMD Migration (Issue #34)
+
+Branch `feat/gerrychain-native-mmd-generation` replaced the temporary-SMD-to-MMD merge workflow with GerryChain 1.0.0's native multimember generation:
+
+- `gerrychain==1.0.0` in the `mmd` extra; pandas 3, numpy, geopandas, scipy, networkx, and Streamlit (1.56.0) pins moved together; `rustworkx` and `tqdm` added.
+- GerryChain 1.0.0 graph API: `graph.node_data(node)[key]`; `graph.nodes` / `graph.edges` are properties; `partition.assignment` uses internal integer IDs, translated back with `assignment_by_original_node_id(partition)` before plans are saved.
+- `mmd_generation.py` builds a seat-proportional seed plan at runtime (peel one district at a time: NC `5/5/4` is `5 | 9`, then `5 | 4`), validates it, then runs `MultiMemberReCom` with per-seat population and contiguity constraints.
+- New config keys: `recom_variant`, `burn_in_steps`, `step_interval`, `max_seed_attempts`, `save_seed_plan`. Removed and rejected: `mmd_smd_multiplier`, `mmd_plans_per_smd_plan`, `max_mmd_attempts_per_smd_plan`, `save_intermediate_smd_plans`.
+- `SMD` mode keeps equal-population ReCom, now with an explicit `random.Random(seed)` and `pair_selection="cut_edges"` to match GerryChain 0.3.2 behavior.
+
 ## Current Expected Environment
 
 The live repo for this project work is:
@@ -63,12 +75,7 @@ Expected setup:
 
 ## Current MMD Notebook Expectations
 
-For `MMD_Generation_Layer/Processor/main.ipynb`, the successor thread should expect:
-
-- the first install cell uses `%pip`, not `!pip`
-- config imports should come from `MMD_Generation_Layer.config`
-- failures related to `import config` usually mean the notebook has stale saved cells or a stale kernel
-- failures related to package imports usually mean the wrong kernel or wrong repo path is in use
+`MMD_Generation_Layer/Processor/main.ipynb` is the legacy prototype. It does not run under GerryChain 1.0.0 (it uses the 0.3.2 graph API and the removed temporary-SMD workflow) and has a notice cell at the top. Use `python -m MMD_Generation_Layer.Processor.main --config <config.json>` instead. Migrating, wrapping, or deleting the notebook is a follow-up decision.
 
 ## Known Risks And Watchouts
 
@@ -76,14 +83,18 @@ For `MMD_Generation_Layer/Processor/main.ipynb`, the successor thread should exp
 - There was an older copied repo with a similar name that previously contaminated editable installs. If imports start resolving to the wrong project path again, check `.venv/lib/python3.14/site-packages/__editable__*.pth`.
 - `main.ipynb` may still contain stale saved output from earlier failures even though the code cells were corrected.
 - MMD code depends on geospatial packages, so environment issues may still come from platform package compatibility rather than project code.
+- After the GerryChain 1.0.0 migration everyone must reinstall `.[mmd]`; branches still pinned to GerryChain 0.3.2 will not run in a 1.0.0 environment.
+- An invalid run config (including one with removed keys) logs the error and falls back to the NC defaults instead of stopping; check the log before trusting outputs.
+- `feature/mmd-state-scoped-outputs` changes output paths in `config.py` and `runtime_setup.py`; whichever branch merges second needs a careful conflict resolution there.
+- Dashboard under Streamlit 1.56: the Summary Stats table logs an Arrow conversion warning (mixed-type column) and `use_container_width` is deprecated; both render fine.
 
 ## What This Thread Should Do Next
 
 Good next tasks for the successor MMD thread:
 
-1. verify the MMD notebook runs start-to-finish in the repo `.venv`
-2. clear stale notebook output if the user wants a cleaner artifact
-3. test the Streamlit dashboard entry point
+1. choose research-grade defaults for `recom_variant`, `burn_in_steps`, and `step_interval` using full-size runs
+2. decide whether to migrate, wrap, or delete the legacy notebook
+3. decide whether invalid run configs should stop the run instead of falling back to defaults
 4. tighten `.gitignore` and remove checked-in generated packaging artifacts if requested
 5. keep MMD-specific setup isolated from representational and simulation feature work
 
@@ -110,6 +121,8 @@ The following checks were already run successfully in this thread:
   - `Simulation_Layer/Tests/test_acceptance_e2e.py`
 
 Result: 38 tests passed.
+
+For the GerryChain 1.0.0 migration (October 2026): the full suite passed with `149 passed`, including the MMD suite in `MMD_Generation_Layer/Tests/`; the small SC, TN, VA MMD configs and the SMD debug config ran end to end; and the dashboard rendered native MMD output without exceptions.
 
 ## Handoff Summary
 

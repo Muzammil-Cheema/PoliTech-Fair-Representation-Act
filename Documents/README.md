@@ -107,25 +107,34 @@ Without `--config`, the runner uses the defaults in `MMD_Generation_Layer/config
 - `shape_path`, `id_column`, `geom_column`, `pop_column`, `dem_column`, and `rep_column`.
 - `population_tolerance`: a number strictly between `0` and `1`.
 - `seat_vector`: a non-empty list of positive integers in MMD mode. Its sum must equal `num_districts`.
-- `mmd_smd_multiplier`, `mmd_plans_per_smd_plan`, and `max_mmd_attempts_per_smd_plan`: positive integers controlling temporary SMD generation and MMD search.
-- `save_intermediate_smd_plans`: a boolean that saves temporary SMD assignments during MMD generation.
+- In MMD mode, `seat_vector` must contain at least 2 districts.
+- `recom_variant` (default `district_pairs_mst`; also `cut_edges_mst`, `district_pairs_ust`, `cut_edges_ust`), `burn_in_steps` (default `0`), `step_interval` (default `1`), `max_seed_attempts` (default `10`), and `save_seed_plan` (default `false`): native MMD chain controls, ignored in SMD mode.
 
-The legacy `mmd_seat_vector` key is rejected; use `seat_vector`. Unknown keys are rejected during validation. If a supplied configuration cannot be loaded or validated, the current runner logs warnings and continues with `config.py` defaults.
+`mmd_smd_multiplier`, `mmd_plans_per_smd_plan`, `max_mmd_attempts_per_smd_plan`, and `save_intermediate_smd_plans` were removed in the GerryChain 1.0.0 migration and are rejected in either mode; delete them from older configs. The legacy `mmd_seat_vector` key is rejected; use `seat_vector`. Unknown keys are rejected during validation. If a supplied configuration cannot be loaded or validated, the current runner logs warnings and continues with `config.py` defaults.
 
-The current default configuration is an MMD run using North Carolina data, 50 requested final plans, 14 total seats, a `[5, 5, 4]` seat vector, a 5% population tolerance, and five requested MMD plans per temporary SMD plan with up to ten search attempts per source plan. The default shape is `MMD_Generation_Layer/Data/Shapefiles/NC/nc_2024_with_population.shp`.
+The current default configuration is an MMD run using North Carolina data, 50 requested final plans, 14 total seats, a `[5, 5, 4]` seat vector, a 5% population tolerance, and the native chain defaults above. The default shape is `MMD_Generation_Layer/Data/Shapefiles/NC/nc_2024_with_population.shp`.
 
 ### Current MMD behavior
 
-The script workflow currently:
+Since the GerryChain 1.0.0 migration (issue #34), `SMD` mode builds equal-population single-member plans with ReCom and `MMD` mode builds seat-proportional multimember plans with GerryChain's native `MultiMemberReCom`. District label `i` always has `seat_vector[i]` seats.
 
-1. Loads precinct geodata and validates the configured ID, geometry, population, and Democratic/Republican vote columns.
-2. Generates temporary contiguous equal-population SMD plans with GerryChain/ReCom.
-3. Groups temporary SMD units into contiguous MMDs using the requested `seat_vector`.
-4. Enforces seat-weighted population targets for the resulting MMDs.
-5. Deduplicates MMD plans within each temporary SMD source plan.
-6. Saves assignments, summaries, metadata, and optional diagnostics.
+1. **Targets.** `per_seat_population = total_population / sum(seat_vector)` (about 762,804 for NC). District `i` targets `seat_vector[i] × per_seat_population`.
+2. **Population tolerance is per seat.** Every district's population divided by its seats must be within `population_tolerance` of `per_seat_population`.
+3. **Seed plan.** A valid starting plan is built at runtime by peeling off one district at a time with GerryChain's unequal-target spanning-tree split: NC `5/5/4` is split `5 | 9`, then `5 | 4`. Every district is contiguous. A failed attempt retries up to `max_seed_attempts`, then stops with a clear error. Code: `build_mmd_seed_assignment(...)` and `create_mmd_seed_partition(...)` in `MMD_Generation_Layer/Processor/mmd_generation.py`.
+4. **Chain.** `MultiMemberReCom` (variant chosen by `recom_variant`) repeatedly merges two neighbouring districts and re-splits them in proportion to their seat counts. Seat counts stay attached to district labels; only geography changes. Contiguity and per-seat population are enforced on every plan. Code: `generate_mmd_ensemble(...)`.
+5. **Sampling.** The seed is chain step 0 and is never saved. After `burn_in_steps`, every `step_interval`-th plan is saved until `num_plans` plans exist. Defaults (`0`, `1`) save every step; raise them for more independent ensembles.
+6. **Reproducibility.** One `random.Random(seed)` drives the seed plan and the chain, so the same config reproduces the same ensemble.
 
-The MMD workflow is usable for exploratory research but remains experimental. Proposal quality, plan diversity, runtime, and downstream representational/simulation integration still need further work.
+Seats in `baseline_ensemble.csv` are counted winner-take-all per district. That is a display rule for the ensemble summary, not proportional FRA/STV allocation, which belongs to the simulation layer.
+
+The MMD workflow is usable for exploratory research but remains experimental. Research-grade `recom_variant`, `burn_in_steps`, and `step_interval` choices, runtime, and downstream representational/simulation integration still need further work.
+
+### Migrating to GerryChain 1.0.0
+
+- Reinstall dependencies after pulling: `python3 -m pip install -e '.[mmd]'`. GerryChain 1.0.0 requires pandas 3, so pandas, numpy, geopandas, scipy, networkx, and Streamlit move together, and `rustworkx` and `tqdm` are added.
+- Delete the removed temporary-SMD keys listed above from old configs.
+- Use `num_plans` for the number of saved MMD plans directly; there are no temporary SMD plans anymore.
+- Custom GerryChain code must use the 1.0.0 graph API: `graph.node_data(node)[key]` for node attributes, `graph.nodes` / `graph.edges` as properties, and `assignment_by_original_node_id(partition)` to turn `partition.assignment` (internal integer IDs) back into precinct IDs.
 
 ### MMD inputs and outputs
 
@@ -139,7 +148,7 @@ MMD_Generation_Layer/Outputs/<STATE>/
   run_metadata.json
   seat_share.png
   Plan_Assignments/plan_<id>.json
-  Intermediate_SMD_Plans/smd_plan_<id>.json       # optional
+  seed_plan.json                                   # optional, MMD with save_seed_plan
   baseline_districts_plan_<id>.csv                 # optional
 ```
 
@@ -223,7 +232,7 @@ Keep these boundaries intact. Do not mix representational preference logic into 
 
 ## Testing
 
-The configured pytest paths are `Representational_Layer/Tests/` and `Simulation_Layer/Tests/`. Run the full suite with the virtual-environment interpreter so the command does not depend on a globally installed `pytest` executable:
+The configured pytest paths are `Representational_Layer/Tests/`, `Simulation_Layer/Tests/`, and `MMD_Generation_Layer/Tests/`. Run the full suite with the virtual-environment interpreter so the command does not depend on a globally installed `pytest` executable:
 
 ```bash
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -m pytest -q
@@ -239,7 +248,13 @@ python3 Simulation_Layer/Tests/run_acceptance_cli.py
 
 The representational tests cover models, scoring, input contracts, ballot generation, and JSON round trips. The simulation acceptance suite covers canonical single-seat and multi-seat edge cases, CLI-visible output, invalid paths, and repeated-run determinism.
 
-MMD JSON configurations under `MMD_Generation_Layer/Tests/Notebook_Run_Configs/` are runtime fixtures, not pytest tests. Validate them through the terminal runner with the MMD CLI.
+The MMD tests (`test_graph_loading.py`, `test_smd_generation.py`, `test_mmd_seed.py`, `test_mmd_chain.py`, `test_mmd_run_config.py`) cover graph loading, SMD generation, seed plans, the native chain, and run-config validation. All except `test_mmd_run_config.py` skip automatically when the `mmd` extra (GerryChain) is not installed:
+
+```bash
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -m pytest -q MMD_Generation_Layer/Tests
+```
+
+`test_mmd_run_config.py` loads every JSON configuration under `MMD_Generation_Layer/Tests/Notebook_Run_Configs/` and checks that each `invalid_*` fixture is rejected; the `*_small` configs are also the quickest end-to-end check through the terminal runner.
 
 ## Project Configuration
 
@@ -262,14 +277,15 @@ No runtime source code currently requires application-specific environment varia
 
 Important configuration lives in:
 
-- `MMD_Generation_Layer/config.py`: paths, default mode, plan counts, seat vector, state columns, seed, tolerances, and MMD search limits.
+- `MMD_Generation_Layer/config.py`: paths, default mode, plan counts, seat vector, state columns, seed, tolerances, and native MMD chain controls.
 - `Simulation_Layer/Core/config.py`: RCV/STV modes and counting defaults.
 - `Global_Utilities/json_io.py`: project root and `Pipe/` resolution.
 
 ## Current Limitations And Remaining Work
 
 - The MMD output is a district-generation artifact and is not yet consumed directly by the simulation layer.
-- The MMD generator uses temporary SMD ReCom plans followed by a custom contiguous BFS merge strategy; native proposal strategies and larger-scale performance remain open research work.
+- The MMD generator uses GerryChain 1.0.0's native `MultiMemberReCom`; research-grade sampling settings (`recom_variant`, `burn_in_steps`, `step_interval`) and larger-scale performance remain open research work.
+- Seat counts in MMD ensemble summaries are winner-take-all per district, not FRA/STV results.
 - The included precinct data currently contain population and election results, but not a completed precinct-level race/ethnicity data product. Demographic data must be reconciled from Census blocks or another validated source before racial-dispersion metrics can be trusted.
 - The population and election vintages are not time-aligned: current runs combine 2020 Census population with 2024 voting data.
 - The current dashboard is a baseline plan viewer, not yet a complete ensemble-wide MMD/RCV analysis interface.
