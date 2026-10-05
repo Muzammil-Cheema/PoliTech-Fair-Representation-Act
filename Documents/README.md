@@ -1,267 +1,297 @@
 # Politech Fair Representation Act
 
-## For Humans: Understanding this Repo
+## Project Overview
 
-This repository has three separate code layers that should stay separate:
+This repository is research software for studying the Fair Representation Act (FRA) through three cooperating but separate layers:
 
-- `MMD_Generation_Layer/`: generates and visualizes district-plan ensembles from geographic data.
-- `Representational_Layer/`: generates candidates and ranked ballots.
-- `Simulation_Layer/`: consumes election JSON and runs FRA counting rules.
+- `MMD_Generation_Layer/` generates geographic district-plan artifacts and visualizations.
+- `Representational_Layer/` models candidates, elector units, preferences, and rank-preserving ballots.
+- `Simulation_Layer/` consumes simulation-ready election JSON and runs RCV or multi-seat STV tabulation.
 
-The fastest way to avoid regressions is to treat those as separate products with explicit file boundaries. MMD generation produces district-plan artifacts; the representational layer produces candidates and rank-preserving ballots; the simulation layer consumes election JSON and determines winners.
+The shared boundary between representational modeling and simulation is the typed JSON contract implemented in `Global_Utilities/json_io.py`. MMD outputs are geographic district artifacts; they are not simulation-ready election JSON.
 
-## MMD Generation Layer Scope
+The root `README.md` is a compatibility symlink to this file. `Documents/` is the canonical home for project documentation.
 
-`MMD_Generation_Layer/` was copied into this repo from a previous standalone project. It is now the home for district-plan generation work, but it is not yet a complete FRA multimember-district generator.
+## Start Here
 
-Current implementation:
-
-- Uses a North Carolina precinct shapefile at `MMD_Generation_Layer/Data/Shapefiles/NC/nc_2024_with_population.shp`.
-- Builds district-plan ensembles with GerryChain/ReCom from `MMD_Generation_Layer/Processor/main.ipynb`.
-- Uses shared MMD config in `MMD_Generation_Layer/config.py`.
-- Writes baseline plan summaries to `MMD_Generation_Layer/Outputs/baseline_ensemble.csv`.
-- Writes precinct-to-district assignment JSON files to `MMD_Generation_Layer/Outputs/Plan_Assignments/`.
-- Optionally writes the temporary SMD plans used to build MMD output to `MMD_Generation_Layer/Outputs/Intermediate_SMD_Plans/` when `save_intermediate_smd_plans` is set (debugging/inspection aid, off by default; see below).
-- Writes the resolved run config (`shape_path`, `num_districts`, `num_plans`, `id_column`, `geom_column`) to `MMD_Generation_Layer/Outputs/run_metadata.json` after each run.
-- Provides a Streamlit dashboard in `MMD_Generation_Layer/Client/baseline_dashboard.py` that reads `run_metadata.json` to resolve which state's shapefile/config to render, falling back to `config.py`'s NC defaults if no metadata file is present.
-
-Data note: current MMD runs pair 2020 Census population figures with 2024 voting data. Keep that year mismatch in mind when interpreting outputs or comparing them to fully time-aligned analyses.
-
-### MMD population and geometry construction
-
-GerryChain needs every graph unit to have a geometry, adjacency relationships, total population, and election results. Those fields are not generally available together from one government source at one shared geographic level, so the population and election datasets must be spatially reconciled.
-
-The current approach uses election precincts as the graph units:
-
-- Preserve the precinct geometries and reported 2024 precinct vote totals from the election shapefile.
-- Read official 2020 Census block geometries and `POP20` population totals from TIGER/Line files.
-- Reconstruct each precinct's `TOTPOP` by assigning Census block population to the precincts that contain or overlap the block.
-- Use either the fast point method, which assigns the entire block population to the precinct containing its Census internal point, or the slower area-weighted method, which distributes population according to the fraction of block area overlapping each precinct. The area-weighted method is preferred for retained research data.
-
-This can be summarized as **reported precinct votes plus reconstructed precinct population**. It preserves the election reporting units and avoids expanding the GerryChain graph to hundreds of thousands of Census blocks. Statewide population is preserved very closely, apart from boundary mismatches and rounding, but individual precinct values remain estimates because Census data do not identify where people live within each block. The method also combines 2020 population with 2024 votes, so it does not capture population movement after the Census.
-
-A reverse approach could instead use Census blocks as the graph units:
-
-- Preserve the official Census block geometries and exact block-level `POP20` totals.
-- Overlay election precincts onto the blocks.
-- Reconstruct block-level Democratic and Republican vote totals by distributing each precinct's reported votes among its overlapping blocks, using area or a population-related weighting variable.
-- Build district plans directly from the much larger block graph and aggregate the reconstructed block votes into each generated district.
-
-The reverse approach can be summarized as **reported block population plus reconstructed block votes**. It gives the district generator finer population geometry, but it does not make the combined dataset exact: ballots are reported for whole precincts, not Census blocks, so their locations within a precinct are unknown. It would also substantially increase graph-building, memory, and ensemble-generation costs. Unless population precision becomes more important than vote preservation and runtime, the current precinct-based method is the practical default for exploratory and unpublished academic research. Comparisons between the point and area-weighted methods, statewide-total checks, and sensitivity tests should be used before drawing strong conclusions from individual precincts or close district outcomes.
-
-Important limitation: the current MMD code generates equal-population district plans with one population target across districts. Real FRA multimember maps will need proportional population targets by seat count, for example a 5-seat MMD should target roughly five times the ideal single-seat population. That proportional MMD grouping work is still future work.
-
-### MMD notebook run configs
-
-The notebook supports JSON run configs stored under `MMD_Generation_Layer/Tests/Notebook_Run_Configs/`.
-
-You can load one manually inside `MMD_Generation_Layer/Processor/main.ipynb` with:
-
-```python
-load_run_config("../Tests/Notebook_Run_Configs/smd_valid_baseline.json")
-```
-
-Or set:
-
-```python
-CONFIG_PATH = "../Tests/Notebook_Run_Configs/smd_valid_baseline.json"
-```
-
-The notebook bootstrap loader will apply that config automatically.
-
-Config categories:
-
-- `smd_valid_*`: expected-valid SMD scenarios.
-- `mmd_valid_*`: expected-valid MMD scenarios.
-- `mmd_edge_*`: syntactically valid, but may produce fewer plans or fail under strict constraints.
-- `invalid_*`: intentionally invalid inputs for validation-path testing.
-
-Important config rules:
-
-- `generation_mode` must be `"SMD"` or `"MMD"`.
-- `population_tolerance` must be strictly between `0` and `1`.
-- In `MMD` mode, `seat_vector` must be a non-empty list of positive integers.
-- Legacy `mmd_seat_vector` is intentionally rejected with a clear error.
-- The loader is strict and raises errors on unknown keys.
-- `save_intermediate_smd_plans` (bool, default `false`) only changes behavior in `MMD` mode: when `true`, it writes the temporary SMD plans used to build MMD output as JSON to `MMD_Generation_Layer/Outputs/Intermediate_SMD_Plans/` (`smd_plan_<id>.json`, one per temporary SMD plan), without changing the normal MMD `Plan_Assignments` output. In `SMD` mode the flag is accepted but explicitly ignored: the run logs an info message noting it has no effect and does not create the directory.
-
-## Best-Practice Structure
-
-- Keep representational experiments in `Representational_Layer/Src/Representational_Layer/`.
-- Keep simulation models, counting utilities, and tabulation configuration in `Simulation_Layer/Core/`; use `Simulation_Layer/Core/utils.py` for simulation helper imports.
-- Keep district generation and map/dashboard logic in `MMD_Generation_Layer/`.
-- Use `Global_Utilities/json_io.py` for JSON contracts between layers.
-- Use `Global_Utilities/logger.py` wrappers (`info/warn/success/error`) for runtime messaging.
-- Keep reusable attribute vocabulary in `Representational_Layer/Attributes/starter_attributes.py`.
-- Put generated handoff JSON in `Pipe/` through the JSON helpers.
-- Keep local/debug representational outputs in `Representational_Layer/Outputs/` when a test also needs an inspection copy.
-- Use the root `pyproject.toml` for shared package, Python path, and pytest configuration.
-
-## What Already Exists (Do Not Duplicate)
-
-- Data models:
-  - Representational models in `Representational_Layer/Src/Representational_Layer/models.py`
-  - Top-level representational compatibility imports in `Representational_Layer/models.py`, `Representational_Layer/generation.py`, and `Representational_Layer/scoring.py`
-  - Simulation models in `Simulation_Layer/Core/models.py`
-  - Simulation counting and ballot-resolution utilities in `Simulation_Layer/Core/utils.py`
-- MMD configuration and generation:
-  - `MMD_Generation_Layer/config.py`
-  - `MMD_Generation_Layer/Processor/main.ipynb`
-  - `MMD_Generation_Layer/Client/baseline_dashboard.py`
-- Scoring logic:
-  - `Representational_Layer/Src/Representational_Layer/scoring.py`
-- Ballot generation helpers:
-  - `Representational_Layer/Src/Representational_Layer/generation.py`
-- Simulation-ready JSON writers/readers:
-  - `Global_Utilities/json_io.py`
-  - `Representational_Layer/Src/output_writer.py` (thin wrapper for representational tests)
-- Acceptance fixtures:
-  - `Pipe/Acceptance_Test_Cases/*.json`
-- Simulation-ready representational exports:
-  - `Pipe/test_*_output.json`
-- Optional local inspection exports:
-  - `Representational_Layer/Outputs/test_*_output.json`
-
-Before adding a new utility, search for it first with `rg`.
-
-## Daily Workflow
-
-1. From the repository root, activate the environment: `source .venv/bin/activate`.
-2. Install the editable project with test dependencies: `python -m pip install -e '.[dev]'`.
-3. Run tests: `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q`.
-4. Generate or refresh simulation-ready JSON through `write_simulation_ready_output(...)` or `write_simulation_ready_json(...)`.
-
-For MMD work, install the optional geospatial/dashboard dependencies with `python -m pip install -e '.[mmd]'`, then work from `MMD_Generation_Layer/Processor/main.ipynb` or run the dashboard with `streamlit run MMD_Generation_Layer/Client/baseline_dashboard.py`.
-
-Useful commands:
-
-- `python -m pip install -e '.[dev]'`: install the repo for test/development work.
-- `python -m pip install -e '.[mmd]'`: install the geospatial, notebook, and dashboard dependencies.
-- `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q`: run all configured tests.
-- `jupyter notebook MMD_Generation_Layer/Processor/main.ipynb`: open the MMD notebook workflow.
-- `python Simulation_Layer/fra_engine.py`: run the simulation CLI compatibility shim.
-- `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q Simulation_Layer/Tests/test_acceptance_e2e.py`: run the simulation end-to-end acceptance tests.
-- `python Simulation_Layer/Tests/run_acceptance_cli.py`: replay every canonical acceptance case through the CLI transcript path and validate winners.
-- `streamlit run MMD_Generation_Layer/Client/baseline_dashboard.py`: inspect generated MMD baseline plans.
-
-Common task commands:
+Run commands from the repository root:
 
 ```bash
-# Run the MMD notebook
-python -m pip install -e '.[mmd]'
-jupyter notebook MMD_Generation_Layer/Processor/main.ipynb
-
-# Run the FRA CLI counter
-python Simulation_Layer/fra_engine.py
-
-# Run the e2e simulation acceptance tests
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q Simulation_Layer/Tests/test_acceptance_e2e.py
+source .venv/bin/activate
+python3 -m pip install -e '.[dev,mmd]'
 ```
 
-Terminal-output nuance: running `python Simulation_Layer/fra_engine.py` or `python Simulation_Layer/Runner/main.py` is a manual CLI flow, so it prompts for an input JSON path and prints winners, final candidate status, and round details to the terminal. Running the e2e tests with `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q Simulation_Layer/Tests/test_acceptance_e2e.py` is not meant as an interactive report; it validates expected outcomes and normally stays quiet unless a case fails.
+The `dev` extra installs pytest. The `mmd` extra installs geospatial, GerryChain, plotting, notebook, and Streamlit dependencies. The notebook dependency remains available for legacy inspection, but the active MMD workflow is terminal-only.
 
-Current verified test state:
+## MMD Generation
 
-- On May 3, 2026, `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/pytest -q` completed with `41 passed`.
+### Active workflow: terminal CLI
 
-## Environment Variables And Globals
+Use the script runner at `MMD_Generation_Layer/Processor/main.py`:
 
-### Environment variables
+```bash
+python3 -m MMD_Generation_Layer.Processor.main [OPTIONS]
+```
 
-- Required by source code: none currently required.
-- Common workflow variables:
-  - `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` for stable test runs.
-  - `PYTHONPATH=.:Src` for direct script execution from `Representational_Layer/`.
-  - `PYTHONPATH=.:MMD_Generation_Layer` can be useful when running MMD scripts directly.
+`MMD_Generation_Layer/Processor/main.ipynb` is deprecated and no longer part of the supported workflow. It is retained only as historical material. Do not use it to generate plans, do not add new workflow logic to it, and do not use its saved outputs as evidence of the current pipeline behavior. Use the terminal commands in this section instead.
 
-### Global constants
+The CLI options are:
 
-- `MMD_Generation_Layer/config.py`: `base_dir`, `processor_dir`, `shape_path`, `output_dir`, `plans_dir`, `intermediate_smd_plans_dir`, `ensemble_csv_path`, `seat_share_png_path`, `NUM_PLANS`, `NUM_DISTRICTS`, `ID_COLUMN`, `GEOM_COLUMN`, `SEED`, `SAVE_INTERMEDIATE_SMD_PLANS`
-- `Global_Utilities/json_io.py`: `PROJECT_ROOT`, `PIPE_DIR_NAME`
-- `Global_Utilities/logger.py`: `RESET`, `BLUE`, `GREEN`, `RED`, `YELLOW`
-- `Simulation_Layer/Core/config.py`: `MODE_SINGLE_SEAT_RCV`, `MODE_MULTI_SEAT_STV`, `VALID_MODES`, `DEFAULT_TRANSFER_VALUE`, `DEFAULT_ENCODING`
-- `Simulation_Layer/fra_engine.py`: `PROJECT_ROOT`
-- `Simulation_Layer/Runner/main.py`: `PROJECT_ROOT`
-- `Representational_Layer/Src/output_writer.py`: `PROJECT_ROOT`
+| Option | Purpose |
+| --- | --- |
+| `--config PATH`, `-c PATH` | Load an optional JSON run configuration. |
+| `--skip-plots` | Generate plans and tabular artifacts without the optional seat-share histogram. |
+| `--district-csvs` | Write district-level CSV diagnostics after saving assignments. |
+| `--dashboard` | Generate artifacts, then launch the Streamlit dashboard. |
+| `--dashboard-only` | Launch the dashboard without generating new plans. |
+| `--` followed by Streamlit arguments | Pass additional arguments to Streamlit. |
 
-## Practical Tips
+See all options directly from the terminal:
 
-- Keep ballots in rank-group format (`rank` + `candidate_ids`), not flat lists.
-- Always include deterministic metadata (`election_id`, `seat_count`, `mode`, `tie_break_order`) when writing handoff JSON.
-- `tie_break_order` is an elimination priority, not a survival priority. If two tied candidates appear as `[A, B]`, then `A` is eliminated before `B`.
-- Treat MMD output files as district-generation artifacts, not simulation-ready election inputs.
-- Prefer top-level imports like `from Representational_Layer.models import Candidate` and `from Simulation_Layer.Core.models import Election`; compatibility wrappers now support these cleaner paths.
-- Favor small, composable functions over monolithic test logic.
-- If adding output files, route them through shared JSON helpers so simulation ingestion remains stable.
-- If changing scoring semantics, update tests and the shared attribute vocabulary together.
+```bash
+python3 -m MMD_Generation_Layer.Processor.main --help
+```
 
-## Common Pitfalls
+### MMD command examples
 
-- Mixing representational profile logic into simulation counting code.
-- Treating current MMD plan assignments as FRA-complete proportional MMD plans.
-- Writing ad-hoc JSON schemas that bypass `Global_Utilities/json_io.py`.
-- Using `print` directly in library/runtime flow instead of logger wrappers.
-- Adding duplicate model classes in new files.
+Generate plans using the defaults in `MMD_Generation_Layer/config.py`:
 
-## Current Test Entry Points
+```bash
+python3 -m MMD_Generation_Layer.Processor.main
+```
 
-- `Representational_Layer/Tests/test_models.py`
-- `Representational_Layer/Tests/test_scoring.py`
-- `Representational_Layer/Tests/test_profile_based_ballot_generation.py`
-- `Representational_Layer/Tests/test_json_io.py`
-- `Simulation_Layer/Tests/test_acceptance_e2e.py`
+Run a small South Carolina MMD configuration:
 
-Supporting simulation test utilities:
+```bash
+python3 -m MMD_Generation_Layer.Processor.main \
+  --config MMD_Generation_Layer/Tests/Notebook_Run_Configs/mmd_valid_sc_small.json
+```
 
-- `Simulation_Layer/Tests/acceptance_helpers.py`
-- `Simulation_Layer/Tests/run_acceptance_cli.py`
+The `Notebook_Run_Configs/` directory name is historical. Its JSON files are terminal-run configuration fixtures; no notebook is required to use them.
 
-## Where Visualization Should Plug In Later
+Generate district CSV diagnostics and skip the histogram:
 
-When you add visualization, consume outputs from:
+```bash
+python3 -m MMD_Generation_Layer.Processor.main \
+  --config MMD_Generation_Layer/Tests/Notebook_Run_Configs/mmd_valid_sc_small.json \
+  --skip-plots \
+  --district-csvs
+```
 
-- `MMD_Generation_Layer/Outputs/Plan_Assignments/*.json` and `MMD_Generation_Layer/Outputs/baseline_ensemble.csv` for district-plan maps and ensemble diagnostics.
-- `score_candidates_for_elector_unit(...)` (candidate score traces)
-- simulation-ready JSON outputs in `Pipe/` (ballot and candidate payloads)
+Generate plans and open the dashboard afterward:
 
-This keeps charts decoupled from core scoring/counting logic.
+```bash
+python3 -m MMD_Generation_Layer.Processor.main \
+  --config MMD_Generation_Layer/Tests/Notebook_Run_Configs/mmd_valid_sc_small.json \
+  --dashboard
+```
 
-## Known Issues And Remaining Work
+Open the dashboard without generating plans:
 
-### High-priority known issues
+```bash
+python3 -m MMD_Generation_Layer.Processor.main --dashboard-only
+```
 
-- The simulation layer has a strong acceptance-test base, but still needs hardening for long-run robustness and legal-confidence edge behavior under varied real-world input distributions.
-- Representational ballot generation currently exists in two styles:
-  - weighted random generation (`generate_ballot(...)` / `generate_weighted_ballot_ranking(...)`)
-  - profile-scoring + deterministic sort (used in profile-based tests)
-  - these should converge behind one simple public generation API.
+The direct Streamlit command remains available when needed:
 
-### What is left to do
+```bash
+python3 -m streamlit run MMD_Generation_Layer/Client/baseline_dashboard.py
+```
 
-1. Simulation-layer correctness and robustness (top priority):
-   - expand beyond fixture-style acceptance tests into stress/property testing
-   - add adversarial/fuzz ballot-shape tests (deep skips, large same-rank groups, repeated ranks at scale)
-   - verify deterministic tie behavior persists cleanly across replay/recount workflows
-   - improve invariant checks and failure diagnostics around transfer-value and threshold transitions
-2. MMD-generation maturity:
-   - continue improving efficiency in the MMD generation workflow, since it is currently the most computationally complex portion of the project
-   - reduce plan-generation cost and improve practical throughput for larger experiment runs
-3. MMD-generation proposal quality:
-   - try native GerryChain proposal strategies for FRA multimember generation instead of relying only on the current workflow
-   - compare proposal quality, runtime, and plan diversity against the current approach
-   - keep the resulting multimember plans usable for downstream research workflows
-4. Representational-layer API simplification:
-   - expose one orchestration entrypoint for: scoring -> ranking -> ballot objects -> simulation JSON export
-   - keep per-method behavior selectable (`deterministic_sort`, weighted, softmax) behind that single entrypoint
-5. Vocabulary maturity:
-   - continue expanding and versioning shared attribute specs in `Representational_Layer/Attributes/`
-   - formalize weight presets and missing-value policies for reproducible experiments
-6. Visualization support:
-   - add reusable export shape for plotting round-by-round candidate utilities and ballot distributions
-   - produce starter notebooks or scripts for score and ranking diagnostics
-7. Documentation alignment:
-   - keep `AGENTS.md` synchronized with each code change
-   - keep simulation handoff examples in `Pipe/` aligned with current writer/readers
-8. Logger modernization:
-   - `Global_Utilities/logger.py` currently uses `print` internally for output formatting
-   - if structured observability is needed later, move this behavior to Python `logging` handlers
+### Run configuration
+
+Without `--config`, the runner uses the defaults in `MMD_Generation_Layer/config.py`. A JSON configuration may override:
+
+- `generation_mode`: `SMD` or `MMD`.
+- `num_plans`, `num_districts`, and `seed`: positive integers.
+- `shape_path`, `id_column`, `geom_column`, `pop_column`, `dem_column`, and `rep_column`.
+- `population_tolerance`: a number strictly between `0` and `1`.
+- `seat_vector`: a non-empty list of positive integers in MMD mode. Its sum must equal `num_districts`.
+- `mmd_smd_multiplier`, `mmd_plans_per_smd_plan`, and `max_mmd_attempts_per_smd_plan`: positive integers controlling temporary SMD generation and MMD search.
+- `save_intermediate_smd_plans`: a boolean that saves temporary SMD assignments during MMD generation.
+
+The legacy `mmd_seat_vector` key is rejected; use `seat_vector`. Unknown keys are rejected during validation. If a supplied configuration cannot be loaded or validated, the current runner logs warnings and continues with `config.py` defaults.
+
+The current default configuration is an MMD run using North Carolina data, 50 requested final plans, 14 total seats, a `[5, 5, 4]` seat vector, a 5% population tolerance, and five requested MMD plans per temporary SMD plan with up to ten search attempts per source plan. The default shape is `MMD_Generation_Layer/Data/Shapefiles/NC/nc_2024_with_population.shp`.
+
+### Current MMD behavior
+
+The script workflow currently:
+
+1. Loads precinct geodata and validates the configured ID, geometry, population, and Democratic/Republican vote columns.
+2. Generates temporary contiguous equal-population SMD plans with GerryChain/ReCom.
+3. Groups temporary SMD units into contiguous MMDs using the requested `seat_vector`.
+4. Enforces seat-weighted population targets for the resulting MMDs.
+5. Deduplicates MMD plans within each temporary SMD source plan.
+6. Saves assignments, summaries, metadata, and optional diagnostics.
+
+The MMD workflow is usable for exploratory research but remains experimental. Proposal quality, plan diversity, runtime, and downstream representational/simulation integration still need further work.
+
+### MMD inputs and outputs
+
+The repository currently includes processed precinct shapefiles for NC, SC, TN, and VA under `MMD_Generation_Layer/Data/Shapefiles/<STATE>/`. The current inputs combine 2020 Census population figures with 2024 election results, so that temporal mismatch must be kept in mind when interpreting results.
+
+Each run writes to a state-specific directory:
+
+```text
+MMD_Generation_Layer/Outputs/<STATE>/
+  baseline_ensemble.csv
+  run_metadata.json
+  seat_share.png
+  Plan_Assignments/plan_<id>.json
+  Intermediate_SMD_Plans/smd_plan_<id>.json       # optional
+  baseline_districts_plan_<id>.csv                 # optional
+```
+
+Generated MMD outputs are ignored by the root `.gitignore`. The assignment JSON files map precinct IDs to district IDs and must not be passed directly to the simulation layer as election JSON.
+
+### Population reconstruction utility
+
+`MMD_Generation_Layer/Utils/population_builder.py` reconstructs precinct-level `TOTPOP` from 2020 Census TIGER/Line blocks. It supports a fast point-in-precinct method, a slower area-weighted method, and a comparison mode:
+
+```bash
+python3 MMD_Generation_Layer/Utils/population_builder.py \
+  --input <precinct-shapefile> \
+  --state-fips <two-digit-state-fips> \
+  --id-col UNIQUE_ID \
+  --output <output-shapefile> \
+  --method area
+```
+
+Available utility options:
+
+- `--method {point,area,both}`: choose the population allocation method.
+- `--compare-to PATH`: compare reconstructed `TOTPOP` against a known population column.
+- `--cache-dir PATH`: choose where downloaded Census block files are cached.
+
+Use `--method area` for retained research data when precinct boundaries overlap Census blocks. Use `--method both` to inspect disagreement between methods before relying on close district-level comparisons.
+
+## Dashboard
+
+The Streamlit dashboard is `MMD_Generation_Layer/Client/baseline_dashboard.py`. It discovers completed state folders under `MMD_Generation_Layer/Outputs/`, loads each state's run metadata, lets the user select a plan, renders a district map, shows party seat summaries, plots the ensemble's Democratic seat-share distribution, and displays a plan table.
+
+The dashboard is currently a baseline visualization and still contains SMD/winner-take-all-oriented labels and assumptions. It should not be interpreted as a complete MMD/RCV research dashboard until those labels and metrics are updated to distinguish district count from total seat count and to expose the MMD seat vector.
+
+## Representational Layer
+
+The representational layer models the political inputs that eventually become ranked ballots.
+
+- `Representational_Layer/Src/Representational_Layer/models.py`: dataclasses for experiments, districts, elections, candidates, elector units, preference models, ranking groups, and ballots.
+- `Representational_Layer/Src/Representational_Layer/input_contract.py`: strict parser and validator for user-authored experiment contracts.
+- `Representational_Layer/Src/Representational_Layer/scoring.py`: candidate similarity and preference scoring.
+- `Representational_Layer/Src/Representational_Layer/generation.py`: weighted and profile-based ranking/ballot generation helpers.
+- `Representational_Layer/Src/output_writer.py`: thin wrapper for writing simulation-ready JSON through shared utilities.
+- `Representational_Layer/Attributes/`: reusable starter attribute vocabulary and defaults.
+
+Top-level compatibility imports are available through `Representational_Layer.models`, `Representational_Layer.generation`, and `Representational_Layer.scoring`.
+
+The layer currently has weighted-random and profile-scoring generation styles. A single orchestration API for configuring an experiment, generating ballots, and exporting simulation-ready JSON remains future work.
+
+## Simulation Layer
+
+The simulation layer runs the FRA counting rules on typed election inputs.
+
+- `Simulation_Layer/Core/models.py`: candidates, rankings, ballots, and elections.
+- `Simulation_Layer/Core/config.py`: supported modes and counting defaults.
+- `Simulation_Layer/Core/utils.py`: ballot resolution, candidate state, counting, transfer, threshold, and round-log helpers.
+- `Simulation_Layer/Runner/main.py`: RCV/STV runners, JSON loading, and the interactive CLI.
+- `Simulation_Layer/fra_engine.py`: compatibility shim that re-exports the runner API and supports direct execution.
+
+Run either interactive simulation entrypoint from the repository root:
+
+```bash
+python3 Simulation_Layer/fra_engine.py
+python3 Simulation_Layer/Runner/main.py
+```
+
+Each command prompts for an input JSON path and reports winners, final candidate status, and round details. The simulation layer expects election metadata, candidates, rank-group ballots, and deterministic tie-break information from the shared JSON contract.
+
+## Shared Utilities And Boundaries
+
+`Global_Utilities/` contains behavior shared across layers:
+
+- `Global_Utilities/json_io.py`: resolves `Pipe/` paths and reads/writes simulation-ready JSON.
+- `Global_Utilities/logger.py`: `info`, `warn`, `success`, and `error` logging wrappers. Informational messages use bright cyan.
+
+`Pipe/` is the shared handoff area for simulation-ready election JSON:
+
+- `Pipe/input.json`: manual CLI input.
+- `Pipe/Acceptance_Test_Cases/*.json`: canonical simulation fixtures.
+- `Pipe/test_*_output.json`: simulation-ready exports produced by representational tests.
+
+Keep these boundaries intact. Do not mix representational preference logic into simulation counting, do not duplicate shared models, and do not treat MMD assignment JSON as simulation-ready election data.
+
+## Testing
+
+The configured pytest paths are `Representational_Layer/Tests/` and `Simulation_Layer/Tests/`. Run the full suite with the virtual-environment interpreter so the command does not depend on a globally installed `pytest` executable:
+
+```bash
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -m pytest -q
+```
+
+Useful focused commands:
+
+```bash
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -m pytest -q Representational_Layer/Tests
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -m pytest -q Simulation_Layer/Tests/test_acceptance_e2e.py
+python3 Simulation_Layer/Tests/run_acceptance_cli.py
+```
+
+The representational tests cover models, scoring, input contracts, ballot generation, and JSON round trips. The simulation acceptance suite covers canonical single-seat and multi-seat edge cases, CLI-visible output, invalid paths, and repeated-run determinism.
+
+MMD JSON configurations under `MMD_Generation_Layer/Tests/Notebook_Run_Configs/` are runtime fixtures, not pytest tests. Validate them through the terminal runner with the MMD CLI.
+
+## Project Configuration
+
+The root `pyproject.toml` is the single package and tooling configuration for the repository. It defines:
+
+- project metadata and Python `>=3.11` support;
+- the `dev` and `mmd` optional dependency groups;
+- pytest `pythonpath` and test paths;
+- setuptools package mappings for the nonstandard layer layout.
+
+Do not add layer-local `pyproject.toml` or `requirements.txt` files. Install or update dependencies through the root configuration.
+
+## Environment Variables And Constants
+
+No runtime source code currently requires application-specific environment variables. Useful workflow settings are:
+
+- `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`: reduces unrelated local pytest plugin interference.
+- `PYTHONPATH=.:Src`: useful when running representational scripts from `Representational_Layer/`.
+- `PYTHONPATH=.:MMD_Generation_Layer`: useful for direct MMD imports from the repository root.
+
+Important configuration lives in:
+
+- `MMD_Generation_Layer/config.py`: paths, default mode, plan counts, seat vector, state columns, seed, tolerances, and MMD search limits.
+- `Simulation_Layer/Core/config.py`: RCV/STV modes and counting defaults.
+- `Global_Utilities/json_io.py`: project root and `Pipe/` resolution.
+
+## Current Limitations And Remaining Work
+
+- The MMD output is a district-generation artifact and is not yet consumed directly by the simulation layer.
+- The MMD generator uses temporary SMD ReCom plans followed by a custom contiguous BFS merge strategy; native proposal strategies and larger-scale performance remain open research work.
+- The included precinct data currently contain population and election results, but not a completed precinct-level race/ethnicity data product. Demographic data must be reconciled from Census blocks or another validated source before racial-dispersion metrics can be trusted.
+- The population and election vintages are not time-aligned: current runs combine 2020 Census population with 2024 voting data.
+- The current dashboard is a baseline plan viewer, not yet a complete ensemble-wide MMD/RCV analysis interface.
+- The representational layer still needs a unified public orchestration API and broader validated voter/candidate attribute support.
+- The simulation layer needs additional property, stress, and adversarial ballot-shape testing beyond the canonical fixtures.
+- The deprecated notebook should not receive new implementation work.
+
+## Contribution Workflow
+
+Before making a change, read `README.md`, `AGENTS.md`, and the relevant handoff in `Documents/Thread_Handoff/`. Follow the issue-first, branch-first, pull-request workflow in `CONTRIBUTING.md`.
+
+Keep code in the layer that owns it, use shared JSON and logging utilities, add or update tests for behavior changes, and update documentation when commands, outputs, or layer contracts change.
+
+## Repository Map
+
+```text
+Global_Utilities/       Shared logging and JSON contract helpers
+MMD_Generation_Layer/   Precinct data, terminal generator, dashboard, outputs
+Representational_Layer/ Candidate/elector modeling and ballot generation
+Simulation_Layer/       FRA RCV/STV models, counting, and CLI
+Pipe/                   Simulation-ready JSON handoff and fixtures
+Documents/              Canonical README, agent guide, and thread handoffs
+pyproject.toml          Root package, dependency, and pytest configuration
+CONTRIBUTING.md         Issue, branch, review, and contribution workflow
+```
