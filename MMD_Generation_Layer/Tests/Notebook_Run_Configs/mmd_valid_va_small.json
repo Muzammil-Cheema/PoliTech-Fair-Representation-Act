@@ -1,0 +1,16 @@
+{
+  "generation_mode": "MMD",
+  "num_plans": 6,
+  "num_districts": 11,
+  "seed": 13579,
+  "shape_path": "../Data/Shapefiles/VA/va_2024_with_population.shp",
+  "id_column": "UNIQUE_ID",
+  "geom_column": "geometry",
+  "population_tolerance": 0.05,
+  "mmd_smd_multiplier": 11,
+  "mmd_plans_per_smd_plan": 2,
+  "max_mmd_attempts_per_smd_plan": 15,
+  "notes": "Small quick-run MMD scenario for Virginia using a compact seat vector.",
+  "expected_behavior": "Should attempt 2 MMD plans per temporary SMD plan and save a small valid Virginia MMD ensemble.",
+  "seat_vector": [4, 4, 3]
+}

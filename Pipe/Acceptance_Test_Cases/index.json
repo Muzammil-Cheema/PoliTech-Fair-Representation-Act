@@ -96,5 +96,33 @@
     "election_id": "candidate-reaches-threshold-exactly",
     "mode": "multi_seat_stv",
     "seat_count": 2
+  },
+  {
+    "file": "15_multi_seat_tie_break_order_beyond_abc.json",
+    "description": "Multi-seat STV with five candidates and a non-alphabetical tie_break_order, so elimination priority follows the configured order rather than candidate ID order.",
+    "election_id": "multi-seat-larger-tie-break-order",
+    "mode": "multi_seat_stv",
+    "seat_count": 2
+  },
+  {
+    "file": "16_multi_seat_three_round_tie_break_cascade.json",
+    "description": "Multi-seat STV where three consecutive elimination rounds each resolve a genuine tie via tie_break_order before any candidate reaches threshold.",
+    "election_id": "multi-seat-three-round-tie-break-cascade",
+    "mode": "multi_seat_stv",
+    "seat_count": 2
+  },
+  {
+    "file": "17_repeated_candidate_ranking_reached_at_rank_three.json",
+    "description": "Single-seat RCV where a repeated candidate ranking at rank 3 is actually reached (rank 2 is a withdrawn candidate) and the ballot continues on to rank 4.",
+    "election_id": "repeated-candidate-ranking-reached-at-rank-three",
+    "mode": "single_seat_rcv",
+    "seat_count": 1
+  },
+  {
+    "file": "18_multi_seat_combined_edge_case_scenario.json",
+    "description": "Draft combined edge case pending Muzammil's review: multi-seat STV mixing a withdrawn candidate, a skipped rank, a same-rank ambiguity ballot, a repeated ranking that is actually reached, and a non-alphabetical tie-break elimination.",
+    "election_id": "multi-seat-combined-edge-case-scenario",
+    "mode": "multi_seat_stv",
+    "seat_count": 2
   }
 ]

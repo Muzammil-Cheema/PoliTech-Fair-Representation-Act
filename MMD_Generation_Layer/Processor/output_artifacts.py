@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from Global_Utilities import info, success
+from MMD_Generation_Layer import config as project_config
 from MMD_Generation_Layer.Processor.runtime_setup import RunConfig
 
 
@@ -20,6 +21,23 @@ def save_ensemble_summary(ensemble: list[dict], csv_path: Path) -> pd.DataFrame:
     results_df.to_csv(csv_path, index=False)
     success(f"Saved summary CSV: {csv_path}")
     return results_df
+
+
+def save_run_metadata(run_config: RunConfig) -> Path:
+    """Persist the resolved run config fields the dashboard needs to read back."""
+    run_config.output_dir.mkdir(parents=True, exist_ok=True)
+    metadata = {
+        "shape_path": str(run_config.shape_path),
+        "num_districts": run_config.num_districts,
+        "num_plans": run_config.num_plans,
+        "id_column": run_config.id_column,
+        "geom_column": run_config.geom_column,
+    }
+    metadata_path = run_config.output_dir / "run_metadata.json"
+    with metadata_path.open("w") as file:
+        json.dump(metadata, file, indent=2)
+    success(f"Saved run metadata: {metadata_path}")
+    return metadata_path
 
 
 def save_plan_assignments(
@@ -114,6 +132,9 @@ def generate_district_csvs(
     gdf: gpd.GeoDataFrame,
     plans_dir: Path,
     output_dir: Path,
+    pop_col: str = project_config.POP_COLUMN,
+    dem_col: str = project_config.DEM_COLUMN,
+    rep_col: str = project_config.REP_COLUMN,
 ) -> bool:
     """Generate district-level CSV files for all saved plan assignments."""
     plan_files = sorted(plans_dir.glob("plan_*.json"))
@@ -132,9 +153,9 @@ def generate_district_csvs(
             precinct_ids = [key for key, value in assignment.items() if value == district_id]
             district_precincts = gdf[gdf.index.isin(precinct_ids)]
 
-            dem_votes = district_precincts["G24PREDHAR"].sum()
-            rep_votes = district_precincts["G24PRERTRU"].sum()
-            population = district_precincts["TOTPOP"].sum()
+            dem_votes = district_precincts[dem_col].sum()
+            rep_votes = district_precincts[rep_col].sum()
+            population = district_precincts[pop_col].sum()
             winner = "Democrat" if dem_votes > rep_votes else "Republican"
 
             district_results.append(
@@ -167,6 +188,7 @@ def save_output_artifacts(
     run_config.output_dir.mkdir(parents=True, exist_ok=True)
     save_plan_assignments(ensemble, run_config.plans_dir)
     results_df = save_ensemble_summary(ensemble, run_config.ensemble_csv_path)
+    save_run_metadata(run_config)
 
     if include_plots:
         plot_seat_share_histogram(results_df, run_config.seat_share_png_path)
@@ -174,7 +196,14 @@ def save_output_artifacts(
     if include_district_csvs:
         if gdf is None:
             raise ValueError("gdf is required when include_district_csvs=True")
-        generate_district_csvs(gdf, run_config.plans_dir, run_config.output_dir)
+        generate_district_csvs(
+            gdf,
+            run_config.plans_dir,
+            run_config.output_dir,
+            pop_col=run_config.pop_column,
+            dem_col=run_config.dem_column,
+            rep_col=run_config.rep_column,
+        )
 
     return results_df
 

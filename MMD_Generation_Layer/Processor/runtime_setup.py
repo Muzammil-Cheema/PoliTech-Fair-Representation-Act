@@ -19,6 +19,9 @@ RUN_CONFIG_ALLOWED_KEYS = {
     "shape_path",
     "id_column",
     "geom_column",
+    "pop_column",
+    "dem_column",
+    "rep_column",
     "population_tolerance",
     "seat_vector",
     "mmd_seat_vector",
@@ -42,6 +45,9 @@ class RunConfig:
     shape_path: Path
     id_column: str
     geom_column: str
+    pop_column: str
+    dem_column: str
+    rep_column: str
     seat_vector: tuple[int, ...]
     mmd_smd_multiplier: int
     mmd_plans_per_smd_plan: int
@@ -55,6 +61,56 @@ class RunConfig:
     seat_share_png_path: Path
 
 
+@dataclass(frozen=True)
+class DashboardRunMetadata:
+    """Resolved metadata the dashboard needs to render a completed run."""
+
+    shape_path: Path
+    num_districts: int
+    num_plans: int
+    id_column: str
+    geom_column: str
+    output_dir: Path
+    plans_dir: Path
+    ensemble_csv_path: Path
+
+
+def load_dashboard_run_metadata(output_dir: Path | None = None) -> DashboardRunMetadata:
+    """Load dashboard metadata from run_metadata.json, falling back to config.py defaults."""
+    output_dir = output_dir or project_config.output_dir
+    metadata_path = output_dir / "run_metadata.json"
+    plans_dir = output_dir / project_config.plans_dir.name
+    ensemble_csv_path = output_dir / project_config.ensemble_csv_path.name
+
+    if metadata_path.exists():
+        with metadata_path.open("r") as file:
+            metadata = json.load(file)
+
+        info(f"Loaded dashboard run metadata from {metadata_path}")
+        return DashboardRunMetadata(
+            shape_path=Path(metadata["shape_path"]),
+            num_districts=int(metadata["num_districts"]),
+            num_plans=int(metadata["num_plans"]),
+            id_column=str(metadata["id_column"]),
+            geom_column=str(metadata["geom_column"]),
+            output_dir=output_dir,
+            plans_dir=plans_dir,
+            ensemble_csv_path=ensemble_csv_path,
+        )
+
+    warn(f"No run metadata found at {metadata_path}; falling back to config.py defaults (NC).")
+    return DashboardRunMetadata(
+        shape_path=project_config.shape_path,
+        num_districts=project_config.NUM_DISTRICTS,
+        num_plans=project_config.NUM_PLANS,
+        id_column=project_config.ID_COLUMN,
+        geom_column=project_config.GEOM_COLUMN,
+        output_dir=output_dir,
+        plans_dir=plans_dir,
+        ensemble_csv_path=ensemble_csv_path,
+    )
+
+
 def default_run_config() -> RunConfig:
     """Build the default script config from `MMD_Generation_Layer.config`."""
     return RunConfig(
@@ -65,6 +121,9 @@ def default_run_config() -> RunConfig:
         shape_path=project_config.shape_path,
         id_column=project_config.ID_COLUMN,
         geom_column=project_config.GEOM_COLUMN,
+        pop_column=project_config.POP_COLUMN,
+        dem_column=project_config.DEM_COLUMN,
+        rep_column=project_config.REP_COLUMN,
         seat_vector=project_config.SEAT_VECTOR,
         mmd_smd_multiplier=project_config.MMD_SMD_MULTIPLIER,
         mmd_plans_per_smd_plan=project_config.MMD_PLANS_PER_SMD_PLAN,
@@ -196,15 +255,20 @@ def apply_run_config(
     validate_run_config(config, base_config)
 
     seat_vector = extract_seat_vector_from_config(config) or base_config.seat_vector
+    resolved_shape_path = resolve_runtime_path(config.get("shape_path", base_config.shape_path))
+    run_output_dir = project_config.base_dir / "Outputs" / resolved_shape_path.parent.name
 
     return RunConfig(
         generation_mode=str(config.get("generation_mode", base_config.generation_mode)).strip().upper(),
         num_plans=int(config.get("num_plans", base_config.num_plans)),
         num_districts=int(config.get("num_districts", base_config.num_districts)),
         seed=int(config.get("seed", base_config.seed)),
-        shape_path=resolve_runtime_path(config.get("shape_path", base_config.shape_path)),
+        shape_path=resolved_shape_path,
         id_column=str(config.get("id_column", base_config.id_column)),
         geom_column=str(config.get("geom_column", base_config.geom_column)),
+        pop_column=str(config.get("pop_column", base_config.pop_column)),
+        dem_column=str(config.get("dem_column", base_config.dem_column)),
+        rep_column=str(config.get("rep_column", base_config.rep_column)),
         seat_vector=seat_vector,
         mmd_smd_multiplier=int(config.get("mmd_smd_multiplier", base_config.mmd_smd_multiplier)),
         mmd_plans_per_smd_plan=int(
@@ -223,11 +287,11 @@ def apply_run_config(
                 base_config.save_intermediate_smd_plans,
             )
         ),
-        output_dir=base_config.output_dir,
-        plans_dir=base_config.plans_dir,
-        intermediate_smd_plans_dir=base_config.intermediate_smd_plans_dir,
-        ensemble_csv_path=base_config.ensemble_csv_path,
-        seat_share_png_path=base_config.seat_share_png_path,
+        output_dir=run_output_dir,
+        plans_dir=run_output_dir / project_config.plans_dir.name,
+        intermediate_smd_plans_dir=run_output_dir / project_config.intermediate_smd_plans_dir.name,
+        ensemble_csv_path=run_output_dir / project_config.ensemble_csv_path.name,
+        seat_share_png_path=run_output_dir / project_config.seat_share_png_path.name,
     )
 
 
