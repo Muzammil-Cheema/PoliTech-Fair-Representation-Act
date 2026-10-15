@@ -1,0 +1,22 @@
+{
+  "generation_mode": "MMD",
+  "num_plans": 20,
+  "num_districts": 9,
+  "seed": 77889,
+  "shape_path": "../Data/Shapefiles/TN/tn_2024_with_population.shp",
+  "id_column": "UNIQUE_ID",
+  "geom_column": "geometry",
+  "population_tolerance": 0.05,
+  "recom_variant": "cut_edges_ust",
+  "burn_in_steps": 10,
+  "step_interval": 3,
+  "max_seed_attempts": 5,
+  "save_seed_plan": true,
+  "notes": "Small Tennessee MMD scenario that sets every native-chain control to a non-default value.",
+  "expected_behavior": "Should load with recom_variant=cut_edges_ust, burn_in_steps=10, step_interval=3, max_seed_attempts=5, save_seed_plan=true.",
+  "seat_vector": [
+    3,
+    3,
+    3
+  ]
+}

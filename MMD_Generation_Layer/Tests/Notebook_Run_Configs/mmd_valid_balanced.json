@@ -7,11 +7,8 @@
   "id_column": "UNIQUE_ID",
   "geom_column": "the_geom",
   "population_tolerance": 0.05,
-  "mmd_smd_multiplier": 10,
-  "mmd_plans_per_smd_plan": 5,
-  "max_mmd_attempts_per_smd_plan": 250,
   "notes": "Primary MMD scenario using the seat vector discussed in the thread.",
-  "expected_behavior": "Should attempt 5 MMD plans for each temporary SMD plan and save valid outputs.",
+  "expected_behavior": "Should build a 5/5/4 seed plan and save 100 native MultiMemberReCom plans.",
   "seat_vector": [
     5,
     5,

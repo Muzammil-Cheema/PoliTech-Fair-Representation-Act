@@ -1,0 +1,18 @@
+{
+  "generation_mode": "MMD",
+  "num_plans": 100,
+  "num_districts": 14,
+  "seed": 67676767,
+  "shape_path": "../Data/Shapefiles/NC/nc_2024_with_population.shp",
+  "id_column": "UNIQUE_ID",
+  "geom_column": "the_geom",
+  "population_tolerance": 0.05,
+  "mmd_plans_per_smd_plan": 5,
+  "notes": "mmd_plans_per_smd_plan was removed with the temporary-SMD workflow.",
+  "expected_behavior": "load_run_config should raise ValueError naming mmd_plans_per_smd_plan as removed in the GerryChain 1.0.0 migration.",
+  "seat_vector": [
+    5,
+    5,
+    4
+  ]
+}
