@@ -148,6 +148,7 @@ This file must be updated after **every LLM-authored code change** so the docume
   - Uses equal-population ReCom for baseline temporary SMD generation.
   - Includes notebook and script workflows that convert temporary SMD plans into genuine FRA-style multimember district plans using a seat vector and seat-weighted population targets.
   - Produces usable FRA multimember district artifacts, but still needs better proposal strategies and efficiency work before large-scale use.
+  - Current runs pair 2020 Census population figures with 2024 voting data, so downstream analysis should keep that temporal mismatch in mind.
 - `MMD_Generation_Layer/config.py`
   - Directories and paths:
     - `base_dir`
@@ -231,7 +232,9 @@ This file must be updated after **every LLM-authored code change** so the docume
   - Runtime config and JSON config loading for script-based MMD runs.
   - Classes:
     - `RunConfig`
+    - `DashboardRunMetadata`
   - Functions:
+    - `load_dashboard_run_metadata(output_dir=None)`
     - `default_run_config()`
     - `resolve_run_config_path(config_path)`
     - `resolve_runtime_path(path_value)`
@@ -244,6 +247,7 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `describe_run_config(run_config)`
 - `MMD_Generation_Layer/Processor/generation_logic.py`
   - Script-based SMD generation and current FRA multimember generation business logic.
+  - In MMD mode, derives the temporary SMD plan count using floor division of `num_plans` by `mmd_plans_per_smd_plan`, with a minimum of one temporary plan.
   - Functions:
     - `load_and_build_graph(shape_path=shape_path, id_col=ID_COLUMN, geom_col=GEOM_COLUMN)`
     - `create_initial_partition(graph, num_districts=NUM_DISTRICTS, seed=SEED, population_tolerance=0.05)`
@@ -267,6 +271,7 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `save_output_artifacts(ensemble, run_config, gdf=None, include_plots=True, include_district_csvs=False)`
 - `MMD_Generation_Layer/Processor/main.py`
   - Script entrypoint for running generation and optionally launching Streamlit.
+  - Launches Streamlit through the same Python interpreter running the pipeline so `--dashboard` and `--dashboard-only` cannot resolve a different global Streamlit environment.
   - Functions:
     - `run_generation_pipeline(config_path=None, include_plots=True, include_district_csvs=False)`
     - `run_streamlit_dashboard(extra_args=None)`
@@ -274,6 +279,8 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `main(argv=None)`
 - `MMD_Generation_Layer/Client/baseline_dashboard.py`
   - Streamlit dashboard for existing baseline outputs.
+  - Reads all run-specific values and artifact paths through `DashboardRunMetadata` rather than importing path values directly from `config.py`.
+  - Reloads `baseline_ensemble.csv` on every dashboard rerun so overwritten outputs update plan choices and statistics; shapefile loading remains cached.
   - Functions:
     - `load_ensemble_results(csv_path: str) -> pd.DataFrame`
     - `load_shapefile(shape_path: str, id_col: str = ID_COLUMN) -> gpd.GeoDataFrame`
@@ -462,7 +469,7 @@ This file must be updated after **every LLM-authored code change** so the docume
   - Keeps raw `run_cli()` output captured internally and emits concise per-test success/warning lines through shared logging wrappers.
   - Recursively discovers runnable JSON files under `Pipe/`, runs each through the CLI path, and compares printed winners against fixture-derived expected winners.
   - Logs success when actual winners match expected winners and logs a warning with actual vs. expected winners before failing when they differ.
-  - Replays all 14 canonical acceptance fixtures 5000 times each through `run_cli()` and logs every expected-vs-actual winner mismatch.
+  - Replays all 18 canonical acceptance fixtures 5000 times each through `run_cli()` and logs every expected-vs-actual winner mismatch.
   - Includes a regression test that invalid CLI input paths emit the shared JSON read error plus a CLI-context warning before exiting.
   - Pytest-local helpers:
     - `run_case(cli_path, monkeypatch, capsys) -> dict`

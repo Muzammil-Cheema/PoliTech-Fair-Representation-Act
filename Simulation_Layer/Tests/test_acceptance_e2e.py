@@ -358,6 +358,122 @@ def test_candidate_reaches_threshold_exactly(
     log_test_success(capsys, "test_candidate_reaches_threshold_exactly passed.")
 
 
+# Verifies a larger, non-alphabetical tie_break_order drives elimination
+# priority correctly in a five-candidate multi-seat STV contest: D is
+# eliminated ahead of the alphabetically-earlier B/C in a three-way tie, then
+# C is eliminated ahead of B in a later two-way tie, purely because of their
+# position in tie_break_order rather than candidate ID order.
+def test_multi_seat_tie_break_order_beyond_abc(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Verify a larger non-alphabetical tie_break_order controls elimination priority."""
+    result = run_case("Acceptance_Test_Cases/15_multi_seat_tie_break_order_beyond_abc.json", monkeypatch, capsys)
+
+    assert result["winners"] == ["A", "E"]
+    assert result["rounds"][1]["action"] == {"type": "eliminate", "candidate": "D"}
+    assert result["rounds"][3]["action"] == {"type": "eliminate", "candidate": "C"}
+    assert result["final_candidate_status"] == {
+        "A": "elected",
+        "B": "active",
+        "C": "eliminated",
+        "D": "eliminated",
+        "E": "elected",
+    }
+    log_test_success(capsys, "test_multi_seat_tie_break_order_beyond_abc passed.")
+
+
+# Verifies three consecutive elimination rounds each resolve a genuine tie via
+# tie_break_order before any candidate reaches threshold, exercising the
+# helper and CLI paths across several successive elimination cycles.
+def test_multi_seat_three_round_tie_break_cascade(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Verify three consecutive tie-broken elimination rounds resolve correctly."""
+    result = run_case("Acceptance_Test_Cases/16_multi_seat_three_round_tie_break_cascade.json", monkeypatch, capsys)
+
+    assert result["winners"] == ["A", "B"]
+    assert result["rounds"][1]["action"] == {"type": "eliminate", "candidate": "F"}
+    assert result["rounds"][2]["action"] == {"type": "eliminate", "candidate": "D"}
+    assert result["rounds"][3]["action"] == {"type": "eliminate", "candidate": "E"}
+    assert result["rounds"][-1]["action"] == {
+        "type": "fill_remaining_seats",
+        "candidates": ["B"],
+    }
+    assert result["final_candidate_status"] == {
+        "A": "elected",
+        "B": "elected",
+        "C": "eliminated",
+        "D": "eliminated",
+        "E": "eliminated",
+        "F": "eliminated",
+    }
+    log_test_success(capsys, "test_multi_seat_three_round_tie_break_cascade passed.")
+
+
+# Verifies a repeated candidate ranking at rank 3 is actually reached (rank 2
+# is a withdrawn candidate, so it never resolves) and the ballot continues on
+# to its rank-4 usable ranking instead of stalling or invalidating.
+def test_repeated_candidate_ranking_reached_at_rank_three(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Verify a repeated ranking reached at rank 3 lets the ballot continue to rank 4."""
+    result = run_case("Acceptance_Test_Cases/17_repeated_candidate_ranking_reached_at_rank_three.json", monkeypatch, capsys)
+
+    assert result["winners"] == ["C"]
+    assert result["rounds"][0]["action"] == {"type": "eliminate", "candidate": "A"}
+    assert result["rounds"][1]["vote_totals"] == {"A": 0.0, "B": 2.0, "C": 3.0, "D": 0.0}
+    assert result["rounds"][1]["action"] == {"type": "elect", "candidate": "C"}
+    assert result["final_candidate_status"] == {
+        "A": "eliminated",
+        "B": "active",
+        "C": "elected",
+        "D": "withdrawn",
+    }
+    log_test_success(capsys, "test_repeated_candidate_ranking_reached_at_rank_three passed.")
+
+
+# Verifies a combined multi-seat scenario mixing a withdrawn candidate, a
+# skipped rank, a same-rank ambiguity ballot, a repeated ranking that is
+# actually reached, and a non-alphabetical tie-break elimination all resolve
+# together without breaking the counting flow. Draft scenario pending
+# Muzammil's review of the exact fixture shape per the tracking issue.
+def test_multi_seat_combined_edge_case_scenario(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Verify a combined multi-condition edge-case scenario resolves correctly."""
+    result = run_case("Acceptance_Test_Cases/18_multi_seat_combined_edge_case_scenario.json", monkeypatch, capsys)
+
+    assert result["winners"] == ["A", "E"]
+    assert result["rounds"][0]["vote_totals"] == {
+        "A": 4.0,
+        "B": 2.0,
+        "C": 2.0,
+        "D": 0.0,
+        "E": 3.0,
+    }
+    assert result["rounds"][1]["action"] == {
+        "type": "elect_and_transfer",
+        "details": [{"candidate": "A", "surplus_fraction": 0.0}],
+    }
+    assert result["rounds"][2]["action"] == {"type": "eliminate", "candidate": "C"}
+    assert result["rounds"][-1]["action"] == {
+        "type": "elect_and_transfer",
+        "details": [{"candidate": "E", "surplus_fraction": 0.0}],
+    }
+    assert result["final_candidate_status"] == {
+        "A": "elected",
+        "B": "active",
+        "C": "eliminated",
+        "D": "withdrawn",
+        "E": "elected",
+    }
+    log_test_success(capsys, "test_multi_seat_combined_edge_case_scenario passed.")
+
+
 # Verifies replay safety across every canonical acceptance fixture: repeated
 # runs against the same in-memory election object should keep producing the
 # fixture-derived expected winners.

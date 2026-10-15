@@ -38,6 +38,9 @@ def run_generation_pipeline(
         run_config.shape_path,
         run_config.id_column,
         run_config.geom_column,
+        run_config.pop_column,
+        run_config.dem_column,
+        run_config.rep_column,
     )
     ensemble = generate_ensemble_for_run(graph, run_config)
     save_output_artifacts(
@@ -54,7 +57,14 @@ def run_generation_pipeline(
 def run_streamlit_dashboard(extra_args: Sequence[str] | None = None) -> int:
     """Run the Streamlit dashboard from the Client layer."""
     dashboard_path = project_config.base_dir / "Client" / "baseline_dashboard.py"
-    command = ["streamlit", "run", str(dashboard_path), *(extra_args or [])]
+    command = [
+        sys.executable,
+        "-m",
+        "streamlit",
+        "run",
+        str(dashboard_path),
+        *(extra_args or []),
+    ]
     info(f"Starting Streamlit dashboard: {' '.join(command)}")
     return subprocess.run(command, check=False).returncode
 
