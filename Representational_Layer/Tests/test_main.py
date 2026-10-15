@@ -2,7 +2,7 @@ import json
 import pytest
 from pathlib import Path
 
-from Representational_Layer import load_experiment_contract
+from Representational_Layer.Utils import load_experiment_contract
 from Representational_Layer.main import run_representational_workflow
 from Global_Utilities import read_simulation_ready_json
 
@@ -104,3 +104,98 @@ def test_run_representational_workflow_is_deterministic_for_same_contract_and_se
     first_payload = json.loads(first_result.output_path.read_text(encoding="utf-8"))
     second_payload = json.loads(second_result.output_path.read_text(encoding="utf-8"))
     assert first_payload == second_payload
+
+
+@pytest.mark.parametrize("missing", ["candidates", "elector_units"])
+def test_selected_election_requires_candidates_and_elector_units(
+    tmp_path: Path, missing: str,
+) -> None:
+    contract_path = Path(__file__).parent / "Input_Contracts" / "valid_starter_and_custom_contract.json"
+    contract = json.loads(contract_path.read_text(encoding="utf-8"))
+
+    district = {**contract["districts"][0], "district_id": "district-south"}
+    election = {
+        **contract["elections"][0],
+        "election_id": "election-south",
+        "district_id": district["district_id"],
+    }
+    run = {
+        **contract["ballot_generation_runs"][0],
+        "generation_run_id": "run-south",
+        "election_id": election["election_id"],
+    }
+    contract["districts"].append(district)
+    contract["elections"].append(election)
+    contract["ballot_generation_runs"].append(run)
+
+    if missing == "candidates":
+        contract["elector_units"].append({
+            **contract["elector_units"][0],
+            "elector_unit_id": "block-south",
+            "election_id": election["election_id"],
+        })
+        expected_error = "no active candidates"
+    else:
+        contract["candidates"].append({
+            **contract["candidates"][0],
+            "candidate_id": "cand-south",
+            "election_id": election["election_id"],
+        })
+        expected_error = "no elector units"
+
+    config_path = tmp_path / "missing_selected_data.json"
+    config_path.write_text(json.dumps(contract), encoding="utf-8")
+    load_experiment_contract(config_path)
+
+    output_path = tmp_path / "should_not_exist.json"
+    with pytest.raises(ValueError, match=expected_error):
+        run_representational_workflow(
+            contract_path=config_path,
+            generation_run_id="run-south",
+            output_path=output_path,
+        )
+    assert not output_path.exists()
+
+
+@pytest.mark.parametrize(
+    "ranking_method",
+    ["deterministic_sort", "weighted_without_replacement", "softmax_without_replacement"],
+)
+def test_rank_cap_applies_during_ballot_creation(
+    tmp_path: Path, ranking_method: str,
+) -> None:
+    contract_path = Path(__file__).parent / "Input_Contracts" / "valid_starter_and_custom_contract.json"
+    contract = json.loads(contract_path.read_text(encoding="utf-8"))
+    contract["districts"][0]["seat_target"] = 1
+    contract["elections"][0]["mode"] = "single_seat_rcv"
+    contract["elections"][0]["max_rankings_allowed"] = 1
+    contract["elector_units"][0]["size"] = 2
+    contract["preference_models"][0]["ranking_method"] = ranking_method
+    config_path = tmp_path / "rank_capped.json"
+    config_path.write_text(json.dumps(contract), encoding="utf-8")
+
+    result = run_representational_workflow(config_path, output_path=tmp_path / "output.json")
+
+    assert len(result.ballots) == 2
+    assert all(len(ballot.rankings) == 1 for ballot in result.ballots)
+    if ranking_method == "deterministic_sort":
+        assert result.ballots[0].rankings == result.ballots[1].rankings
+    assert all(isinstance(ballot.rankings, tuple) for ballot in result.ballots)
+
+
+def test_selected_election_rejects_only_withdrawn_candidates(tmp_path: Path) -> None:
+    contract_path = Path(__file__).parent / "Input_Contracts" / "valid_starter_and_custom_contract.json"
+    contract = json.loads(contract_path.read_text(encoding="utf-8"))
+    first_candidate = contract["candidates"][0]
+    contract["candidates"][0] = {
+        "candidate_id": first_candidate["candidate_id"],
+        "election_id": first_candidate["election_id"],
+        "withdrawn": True,
+        "profile": first_candidate["profile"],
+    }
+    contract["candidates"][1]["withdrawn"] = True
+    config_path = tmp_path / "withdrawn_candidates.json"
+    config_path.write_text(json.dumps(contract), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="no active candidates"):
+        run_representational_workflow(config_path, output_path=tmp_path / "output.json")

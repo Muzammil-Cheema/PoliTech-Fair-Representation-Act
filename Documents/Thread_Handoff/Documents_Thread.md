@@ -48,7 +48,7 @@ The project currently has three conceptual layers:
 Shared handoff JSON goes through:
 
 - `Global_Utilities/json_io.py`
-- `Representational_Layer/Src/output_writer.py`
+- `Representational_Layer/Utils/output_writer.py`
 - `Pipe/`
 
 The documentation thread should keep reminding future work not to blur these boundaries unless the user explicitly asks for an integration refactor.

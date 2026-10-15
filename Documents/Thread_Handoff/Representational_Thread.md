@@ -17,12 +17,14 @@ This thread is not the owner of simulation counting rules or MMD district-genera
 
 ## Primary Scope
 
+Use [the master representational workflow](../representational_workflow.md) as the reference for the intended execution stages and layer boundaries. Keep its diagrams and implementation-alignment notes current when these decisions change.
+
 This thread should treat the following as its main area of responsibility:
 
-- `Representational_Layer/Src/Representational_Layer/models.py`
-- `Representational_Layer/Src/Representational_Layer/scoring.py`
-- `Representational_Layer/Src/Representational_Layer/generation.py`
-- `Representational_Layer/Src/output_writer.py`
+- `Representational_Layer/Utils/models.py`
+- `Representational_Layer/Utils/scoring.py`
+- `Representational_Layer/Utils/generation.py`
+- `Representational_Layer/Utils/output_writer.py`
 - `Representational_Layer/Attributes/starter_attributes.py`
 - `Representational_Layer/Tests/`
 
@@ -76,22 +78,10 @@ Conceptually:
 
 ### `Representational_Layer/`
 
-- `Representational_Layer/__init__.py`
-  - Public facade re-exporting the implementation package under `Representational_Layer/Src/Representational_Layer`.
-- `Representational_Layer/models.py`
-  - Compatibility wrapper for `Representational_Layer/Src/Representational_Layer/models.py`.
-- `Representational_Layer/generation.py`
-  - Compatibility wrapper for `Representational_Layer/Src/Representational_Layer/generation.py`.
-- `Representational_Layer/scoring.py`
-  - Compatibility wrapper for `Representational_Layer/Src/Representational_Layer/scoring.py`.
-
-These top-level wrappers matter because external code is expected to prefer:
-
-- `Representational_Layer.models`
-- `Representational_Layer.generation`
-- `Representational_Layer.scoring`
-
-rather than reaching directly into internal source paths.
+- `Representational_Layer/main.py`
+  - Full JSON-contract-driven public workflow entrypoint.
+- `Representational_Layer/Utils/`
+  - Reusable representational models, input-contract parsing, scoring, ballot generation, and output writing.
 
 ### `Representational_Layer/Attributes/`
 
@@ -107,20 +97,18 @@ rather than reaching directly into internal source paths.
 
 This directory is the seed vocabulary for profile-based representation experiments.
 
-### `Representational_Layer/Src/`
+### Core Utility Modules
 
-- `Representational_Layer/Src/__init__.py`
-  - Source-package container marker.
-- `Representational_Layer/Src/output_writer.py`
+- `Representational_Layer/Utils/output_writer.py`
   - Defines:
     - `write_simulation_ready_output(test_name, ballots, candidates, metadata, project_root=None) -> Path`
   - Thin wrapper around the shared JSON helper that writes simulation-ready outputs into `Pipe/`.
 
-### `Representational_Layer/Src/Representational_Layer/`
+### `Representational_Layer/Utils/`
 
-- `Representational_Layer/Src/Representational_Layer/__init__.py`
+- `Representational_Layer/Utils/__init__.py`
   - Public exports for models, generation, and scoring.
-- `Representational_Layer/Src/Representational_Layer/models.py`
+- `Representational_Layer/Utils/models.py`
   - Core representational dataclasses:
     - `Experiment`
     - `District`
@@ -141,16 +129,16 @@ This directory is the seed vocabulary for profile-based representation experimen
     - `ScoreStyle`
     - `MissingValuePolicy`
     - `RankingMethod`
-- `Representational_Layer/Src/Representational_Layer/scoring.py`
+- `Representational_Layer/Utils/scoring.py`
   - Main scoring entrypoint:
     - `score_candidates_for_elector_unit(candidates, elector_unit, attribute_specs, preference_model) -> CandidateScores`
   - Internal helper functions support numeric similarity, set overlap, custom scoring, missing-value handling, score normalization, and clamping behavior.
-- `Representational_Layer/Src/Representational_Layer/generation.py`
+- `Representational_Layer/Utils/generation.py`
   - Main ballot-generation helpers:
     - `generate_weighted_ballot_ranking(candidates, candidate_probabilities, rng) -> list[RankGroup]`
     - `generate_ballot(ballot_id, generation_run_id, source_elector_unit_id, candidates, candidate_probabilities, rng) -> Ballot`
 
-This internal package is the real implementation home for representational logic.
+`Representational_Layer/Utils/` is the reusable implementation home for representational logic.
 
 ### `Representational_Layer/Outputs/`
 
@@ -320,20 +308,20 @@ From the project root:
 source .venv/bin/activate
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q Representational_Layer/Tests
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q Representational_Layer/Tests/test_json_io.py
-PYTHONPATH=.:Src pytest -q Representational_Layer/Tests/test_profile_based_ballot_generation.py
+PYTHONPATH=. pytest -q Representational_Layer/Tests/test_profile_based_ballot_generation.py
 ```
 
 Useful import guidance:
 
-- prefer `Representational_Layer.models`
-- prefer `Representational_Layer.generation`
-- prefer `Representational_Layer.scoring`
+- prefer `Representational_Layer.Utils.models`
+- prefer `Representational_Layer.Utils.generation`
+- prefer `Representational_Layer.Utils.scoring`
 
 Keep implementation edits in:
 
-- `Representational_Layer/Src/Representational_Layer/`
+- `Representational_Layer/Utils/`
 
-unless the task is specifically about compatibility wrappers.
+and keep the top-level `main.py` as the full public workflow entrypoint.
 
 ## Handoff Summary
 

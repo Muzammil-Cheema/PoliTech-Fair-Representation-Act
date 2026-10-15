@@ -119,17 +119,23 @@ class BallotGenerationRun:
 
 # One explicit rank position in a ballot, supporting ties and skipped ranks by
 # preserving the rank number separately from candidate order.
-@dataclass
+@dataclass(frozen=True)
 class RankGroup:
     rank: int
-    candidate_ids: list[str]
+    candidate_ids: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "candidate_ids", tuple(self.candidate_ids))
 
 
 # One generated ballot linked to both its source elector unit and the ballot
 # generation run that produced it.
-@dataclass
+@dataclass(frozen=True)
 class Ballot:
     ballot_id: str
     generation_run_id: str
     source_elector_unit_id: str
-    rankings: list[RankGroup] = field(default_factory=list)
+    rankings: tuple[RankGroup, ...] = field(default_factory=tuple)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "rankings", tuple(self.rankings))

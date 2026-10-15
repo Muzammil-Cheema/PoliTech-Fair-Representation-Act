@@ -1,6 +1,9 @@
+from dataclasses import FrozenInstanceError
 from random import Random
 
-from Representational_Layer import (
+import pytest
+
+from Representational_Layer.Utils import (
     Ballot,
     BallotGenerationRun,
     Candidate,
@@ -68,7 +71,24 @@ def test_can_build_minimal_experiment_graph() -> None:
     assert preference_model.parameters == {}
     assert generation_run.random_seed == 42
     assert ballot.source_elector_unit_id == elector_unit.elector_unit_id
-    assert ballot.rankings[0].candidate_ids == [candidate.candidate_id]
+    assert ballot.rankings[0].candidate_ids == (candidate.candidate_id,)
+
+
+def test_ballot_rankings_are_immutable_even_with_list_inputs() -> None:
+    candidate_ids = ["cand-a"]
+    rank_group = RankGroup(rank=1, candidate_ids=candidate_ids)
+    rankings = [rank_group]
+    ballot = Ballot("ballot-1", "run-1", "unit-1", rankings)
+
+    candidate_ids.append("cand-b")
+    rankings.clear()
+
+    assert rank_group.candidate_ids == ("cand-a",)
+    assert ballot.rankings == (rank_group,)
+    with pytest.raises(FrozenInstanceError):
+        rank_group.rank = 2
+    with pytest.raises(FrozenInstanceError):
+        ballot.rankings = ()
 
 
 def test_can_generate_rankings_for_multiple_elector_units() -> None:
