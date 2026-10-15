@@ -10,6 +10,8 @@ This repository has three separate code layers that should stay separate:
 
 The fastest way to avoid regressions is to treat those as separate products with explicit file boundaries. MMD generation produces district-plan artifacts; the representational layer produces candidates and rank-preserving ballots; the simulation layer consumes election JSON and determines winners.
 
+The [Representational Layer intended workflow](representational_workflow.md) is the master diagram for configuration validation, model creation, ballot generation, and simulation-ready handoff. It distinguishes the target design from what the current entrypoint implements.
+
 ## MMD Generation Layer Scope
 
 `MMD_Generation_Layer/` was copied into this repo from a previous standalone project. It is now the home for district-plan generation work, but it is not yet a complete FRA multimember-district generator.
@@ -62,7 +64,7 @@ Important config rules:
 
 ## Best-Practice Structure
 
-- Keep representational experiments in `Representational_Layer/Src/Representational_Layer/`.
+- Keep the full representational workflow entrypoint in `Representational_Layer/main.py` and reusable modules in `Representational_Layer/Utils/`.
 - Keep simulation models, counting utilities, and tabulation configuration in `Simulation_Layer/Core/`; use `Simulation_Layer/Core/utils.py` for simulation helper imports.
 - Keep district generation and map/dashboard logic in `MMD_Generation_Layer/`.
 - Use `Global_Utilities/json_io.py` for JSON contracts between layers.
@@ -75,8 +77,7 @@ Important config rules:
 ## What Already Exists (Do Not Duplicate)
 
 - Data models:
-  - Representational models in `Representational_Layer/Src/Representational_Layer/models.py`
-  - Top-level representational compatibility imports in `Representational_Layer/models.py`, `Representational_Layer/generation.py`, and `Representational_Layer/scoring.py`
+  - Representational models in `Representational_Layer/Utils/models.py`
   - Simulation models in `Simulation_Layer/Core/models.py`
   - Simulation counting and ballot-resolution utilities in `Simulation_Layer/Core/utils.py`
 - MMD configuration and generation:
@@ -84,12 +85,12 @@ Important config rules:
   - `MMD_Generation_Layer/Processor/main.ipynb`
   - `MMD_Generation_Layer/Client/baseline_dashboard.py`
 - Scoring logic:
-  - `Representational_Layer/Src/Representational_Layer/scoring.py`
+  - `Representational_Layer/Utils/scoring.py`
 - Ballot generation helpers:
-  - `Representational_Layer/Src/Representational_Layer/generation.py`
+  - `Representational_Layer/Utils/generation.py`
 - Simulation-ready JSON writers/readers:
   - `Global_Utilities/json_io.py`
-  - `Representational_Layer/Src/output_writer.py` (thin wrapper for representational tests)
+  - `Representational_Layer/Utils/output_writer.py`
 - Acceptance fixtures:
   - `Pipe/Acceptance_Test_Cases/*.json`
 - Simulation-ready representational exports:
@@ -146,7 +147,7 @@ Current verified test state:
 - Required by source code: none currently required.
 - Common workflow variables:
   - `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` for stable test runs.
-  - `PYTHONPATH=.:Src` for direct script execution from `Representational_Layer/`.
+  - `PYTHONPATH=..` when importing the `Representational_Layer` package from its directory.
   - `PYTHONPATH=.:MMD_Generation_Layer` can be useful when running MMD scripts directly.
 
 ### Global constants
@@ -157,7 +158,7 @@ Current verified test state:
 - `Simulation_Layer/Core/config.py`: `MODE_SINGLE_SEAT_RCV`, `MODE_MULTI_SEAT_STV`, `VALID_MODES`, `DEFAULT_TRANSFER_VALUE`, `DEFAULT_ENCODING`
 - `Simulation_Layer/fra_engine.py`: `PROJECT_ROOT`
 - `Simulation_Layer/Runner/main.py`: `PROJECT_ROOT`
-- `Representational_Layer/Src/output_writer.py`: `PROJECT_ROOT`
+- `Representational_Layer/Utils/output_writer.py`: `PROJECT_ROOT`
 
 ## Practical Tips
 
@@ -165,7 +166,7 @@ Current verified test state:
 - Always include deterministic metadata (`election_id`, `seat_count`, `mode`, `tie_break_order`) when writing handoff JSON.
 - `tie_break_order` is an elimination priority, not a survival priority. If two tied candidates appear as `[A, B]`, then `A` is eliminated before `B`.
 - Treat MMD output files as district-generation artifacts, not simulation-ready election inputs.
-- Prefer top-level imports like `from Representational_Layer.models import Candidate` and `from Simulation_Layer.Core.models import Election`; compatibility wrappers now support these cleaner paths.
+- Prefer imports like `from Representational_Layer.Utils.models import Candidate` and `from Simulation_Layer.Core.models import Election`.
 - Favor small, composable functions over monolithic test logic.
 - If adding output files, route them through shared JSON helpers so simulation ingestion remains stable.
 - If changing scoring semantics, update tests and the shared attribute vocabulary together.

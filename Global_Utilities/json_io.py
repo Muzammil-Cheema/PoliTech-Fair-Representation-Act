@@ -29,12 +29,12 @@ class RepresentationCandidate(Protocol):
 
 class RepresentationRankGroup(Protocol):
     rank: int
-    candidate_ids: list[str]
+    candidate_ids: tuple[str, ...]
 
 
 class RepresentationBallot(Protocol):
     ballot_id: str
-    rankings: list[RepresentationRankGroup]
+    rankings: tuple[RepresentationRankGroup, ...]
 
 
 SimulationJsonObjects = tuple[

@@ -3,8 +3,8 @@ from Attributes import (
     STARTER_ATTRIBUTE_WEIGHTS,
     get_starter_attribute_specs,
 )
-from output_writer import write_simulation_ready_output
-from Representational_Layer import (
+from Representational_Layer.Utils.output_writer import write_simulation_ready_output
+from Representational_Layer.Utils import (
     Ballot,
     BallotGenerationRun,
     Candidate,

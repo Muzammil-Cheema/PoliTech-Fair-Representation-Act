@@ -10,8 +10,9 @@ from .scoring import CandidateScores
 def generate_deterministic_ballot_ranking(
     candidates: list[Candidate],
     candidate_scores: dict[str, float],
+    max_rankings_allowed: int | None = None,
 ) -> list[RankGroup]:
-    """Generate a full deterministic ranking sorted by score (descending).
+    """Generate a deterministic ranking sorted by score (descending).
 
     Ties are currently broken by preserving the original list order, although
     real tie-breaking policies might be expanded in the future.
@@ -24,8 +25,8 @@ def generate_deterministic_ballot_ranking(
     scored.sort(key=lambda x: (-x[0], x[1]))
 
     return [
-        RankGroup(rank=rank, candidate_ids=[candidate.candidate_id])
-        for rank, (_, _, candidate) in enumerate(scored, start=1)
+        RankGroup(rank=rank, candidate_ids=(candidate.candidate_id,))
+        for rank, (_, _, candidate) in enumerate(scored[:max_rankings_allowed], start=1)
     ]
 
 
@@ -33,8 +34,9 @@ def generate_weighted_ballot_ranking(
     candidates: list[Candidate],
     candidate_probabilities: dict[str, float],
     rng: Random,
+    max_rankings_allowed: int | None = None,
 ) -> list[RankGroup]:
-    """Generate a full ranking by sampling candidates without replacement.
+    """Generate a ranking by sampling candidates without replacement.
 
     Higher candidate probabilities make that candidate more likely to appear
     earlier in the ranking. Each selected candidate receives its own rank.
@@ -43,7 +45,7 @@ def generate_weighted_ballot_ranking(
     rankings: list[RankGroup] = []
     next_rank = 1
 
-    while remaining_candidates:
+    while remaining_candidates and (max_rankings_allowed is None or next_rank <= max_rankings_allowed):
         weights = [max(candidate_probabilities.get(candidate.candidate_id, 0.0), 0.0) for candidate in remaining_candidates]
 
         if sum(weights) == 0:
@@ -52,7 +54,7 @@ def generate_weighted_ballot_ranking(
             selected_candidate = rng.choices(remaining_candidates, weights=weights, k=1)[0]
 
         rankings.append(
-            RankGroup(rank=next_rank, candidate_ids=[selected_candidate.candidate_id])
+            RankGroup(rank=next_rank, candidate_ids=(selected_candidate.candidate_id,))
         )
         remaining_candidates = [
             candidate
@@ -97,10 +99,12 @@ def generate_ballot(
         ballot_id=ballot_id,
         generation_run_id=generation_run_id,
         source_elector_unit_id=source_elector_unit_id,
-        rankings=generate_weighted_ballot_ranking(
-            candidates=candidates,
-            candidate_probabilities=candidate_probabilities,
-            rng=rng,
+        rankings=tuple(
+            generate_weighted_ballot_ranking(
+                candidates=candidates,
+                candidate_probabilities=candidate_probabilities,
+                rng=rng,
+            )
         ),
     )
 
@@ -114,8 +118,11 @@ def generate_ballots_from_scores(
     temperature: float,
     count: int,
     rng: Random,
+    max_rankings_allowed: int,
 ) -> list[Ballot]:
     """Generate a batch of ballots for an elector unit using the configured ranking method."""
+    if max_rankings_allowed <= 0:
+        raise ValueError("max_rankings_allowed must be positive.")
     if count <= 0:
         return []
 
@@ -126,7 +133,11 @@ def generate_ballots_from_scores(
     }
 
     if ranking_method == "deterministic_sort":
-        ranking = generate_deterministic_ballot_ranking(candidates, scores)
+        ranking = tuple(
+            generate_deterministic_ballot_ranking(
+                candidates, scores, max_rankings_allowed=max_rankings_allowed
+            )
+        )
         # For deterministic, all ballots are identical
         return [
             Ballot(
@@ -145,7 +156,12 @@ def generate_ballots_from_scores(
             ballot_id=f"{generation_run_id}-{source_elector_unit_id}-{i:04d}",
             generation_run_id=generation_run_id,
             source_elector_unit_id=source_elector_unit_id,
-            rankings=generate_weighted_ballot_ranking(candidates, probabilities, rng),
+            rankings=tuple(
+                generate_weighted_ballot_ranking(
+                    candidates, probabilities, rng,
+                    max_rankings_allowed=max_rankings_allowed,
+                )
+            ),
         )
         ballots.append(ballot)
         

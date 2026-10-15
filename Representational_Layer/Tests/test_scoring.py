@@ -1,7 +1,7 @@
 import pytest
 
 from Attributes import STARTER_ATTRIBUTE_WEIGHTS, get_starter_attribute_specs
-from Representational_Layer import (
+from Representational_Layer.Utils import (
     Candidate,
     ElectorUnit,
     PreferenceModel,

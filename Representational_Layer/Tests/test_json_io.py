@@ -6,8 +6,8 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
 from Global_Utilities import read_simulation_ready_json, resolve_pipe_path
-from output_writer import write_simulation_ready_output
-from Representational_Layer import Ballot, Candidate, RankGroup
+from Representational_Layer.Utils.output_writer import write_simulation_ready_output
+from Representational_Layer.Utils import Ballot, Candidate, RankGroup
 
 
 def test_global_json_io_returns_typed_simulation_objects(tmp_path: Path) -> None:

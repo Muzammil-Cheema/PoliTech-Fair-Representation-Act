@@ -6,7 +6,7 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 from Global_Utilities import resolve_pipe_path, write_simulation_ready_json
-from Representational_Layer.models import Ballot, Candidate
+from .models import Ballot, Candidate
 
 
 def write_simulation_ready_output(
