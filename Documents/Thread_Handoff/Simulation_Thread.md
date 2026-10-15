@@ -79,9 +79,9 @@ Each round can include:
 From project root:
 
 ```bash
-PYTHONPATH='.:Simulation_Layer:Representational_Layer/Src' .venv/bin/pytest Simulation_Layer/Tests/test_acceptance_e2e.py -q
-PYTHONPATH='.:Representational_Layer/Src' .venv/bin/pytest Representational_Layer/Tests -q
-PYTHONPATH='.:Simulation_Layer:Representational_Layer/Src' .venv/bin/pytest -q
+PYTHONPATH='.:Simulation_Layer' .venv/bin/pytest Simulation_Layer/Tests/test_acceptance_e2e.py -q
+PYTHONPATH='.' .venv/bin/pytest Representational_Layer/Tests -q
+PYTHONPATH='.:Simulation_Layer' .venv/bin/pytest -q
 ```
 
 ## Scope Reminder

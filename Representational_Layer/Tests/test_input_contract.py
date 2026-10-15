@@ -3,7 +3,7 @@ import re
 
 import pytest
 
-from Representational_Layer import (
+from Representational_Layer.Utils import (
     AttributeSpec,
     BallotGenerationRun,
     Candidate,

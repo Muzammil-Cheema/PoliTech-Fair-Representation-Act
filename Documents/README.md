@@ -10,6 +10,8 @@ This repository is research software for studying the Fair Representation Act (F
 
 The shared boundary between representational modeling and simulation is the typed JSON contract implemented in `Global_Utilities/json_io.py`. MMD outputs are geographic district artifacts; they are not simulation-ready election JSON.
 
+The [Representational Layer intended workflow](representational_workflow.md) is the master diagram for configuration validation, model creation, ballot generation, and simulation-ready handoff. It distinguishes the target design from what the current entrypoint implements.
+
 The root `README.md` is a compatibility symlink to this file. `Documents/` is the canonical home for project documentation.
 
 ## Start Here
@@ -185,16 +187,15 @@ The dashboard is currently a baseline visualization and still contains SMD/winne
 
 The representational layer models the political inputs that eventually become ranked ballots.
 
-- `Representational_Layer/Src/Representational_Layer/models.py`: dataclasses for experiments, districts, elections, candidates, elector units, preference models, ranking groups, and ballots.
-- `Representational_Layer/Src/Representational_Layer/input_contract.py`: strict parser and validator for user-authored experiment contracts.
-- `Representational_Layer/Src/Representational_Layer/scoring.py`: candidate similarity and preference scoring.
-- `Representational_Layer/Src/Representational_Layer/generation.py`: weighted and profile-based ranking/ballot generation helpers.
-- `Representational_Layer/Src/output_writer.py`: thin wrapper for writing simulation-ready JSON through shared utilities.
+- `Representational_Layer/main.py`: public JSON-contract-driven workflow entrypoint.
+- `Representational_Layer/Utils/models.py`: dataclasses for experiments, districts, elections, candidates, elector units, preference models, ranking groups, and ballots.
+- `Representational_Layer/Utils/input_contract.py`: strict parser and validator for user-authored experiment contracts.
+- `Representational_Layer/Utils/scoring.py`: candidate similarity and preference scoring.
+- `Representational_Layer/Utils/generation.py`: weighted and profile-based ranking/ballot generation helpers.
+- `Representational_Layer/Utils/output_writer.py`: thin wrapper for writing simulation-ready JSON through shared utilities.
 - `Representational_Layer/Attributes/`: reusable starter attribute vocabulary and defaults.
 
-Top-level compatibility imports are available through `Representational_Layer.models`, `Representational_Layer.generation`, and `Representational_Layer.scoring`.
-
-The layer currently has weighted-random and profile-scoring generation styles. A single orchestration API for configuring an experiment, generating ballots, and exporting simulation-ready JSON remains future work.
+Reusable representational modules live under `Representational_Layer.Utils`. The public entrypoint loads and validates a contract, selects one generation run, scores candidates, generates rank-preserving ballots, and writes simulation-ready JSON.
 
 ## Simulation Layer
 
@@ -272,7 +273,7 @@ Do not add layer-local `pyproject.toml` or `requirements.txt` files. Install or 
 No runtime source code currently requires application-specific environment variables. Useful workflow settings are:
 
 - `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`: reduces unrelated local pytest plugin interference.
-- `PYTHONPATH=.:Src`: useful when running representational scripts from `Representational_Layer/`.
+- `PYTHONPATH=..`: useful when importing `Representational_Layer` while working from its directory.
 - `PYTHONPATH=.:MMD_Generation_Layer`: useful for direct MMD imports from the repository root.
 
 Important configuration lives in:
@@ -289,7 +290,7 @@ Important configuration lives in:
 - The included precinct data currently contain population and election results, but not a completed precinct-level race/ethnicity data product. Demographic data must be reconciled from Census blocks or another validated source before racial-dispersion metrics can be trusted.
 - The population and election vintages are not time-aligned: current runs combine 2020 Census population with 2024 voting data.
 - The current dashboard is a baseline plan viewer, not yet a complete ensemble-wide MMD/RCV analysis interface.
-- The representational layer still needs a unified public orchestration API and broader validated voter/candidate attribute support.
+- The representational layer needs broader validated voter/candidate attribute support.
 - The simulation layer needs additional property, stress, and adversarial ballot-shape testing beyond the canonical fixtures.
 - The deprecated notebook should not receive new implementation work.
 

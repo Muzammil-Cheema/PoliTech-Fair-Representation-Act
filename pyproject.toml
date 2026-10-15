@@ -146,7 +146,6 @@ mmd = [
 pythonpath = [
   ".",
   "Representational_Layer",
-  "Representational_Layer/Src",
   "Simulation_Layer",
   "MMD_Generation_Layer",
 ]
@@ -159,6 +158,7 @@ testpaths = [
 [tool.setuptools]
 packages = [
   "Representational_Layer",
+  "Representational_Layer.Utils",
   "Attributes",
   "Simulation_Layer",
   "Core",
@@ -170,6 +170,7 @@ packages = [
 
 [tool.setuptools.package-dir]
 Representational_Layer = "Representational_Layer"
+"Representational_Layer.Utils" = "Representational_Layer/Utils"
 Attributes = "Representational_Layer/Attributes"
 Simulation_Layer = "Simulation_Layer"
 Core = "Simulation_Layer/Core"

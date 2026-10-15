@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-from Representational_Layer import AttributeSpec
+from Representational_Layer.Utils.models import AttributeSpec
 
 STARTER_SIX_ATTRIBUTE_SPECS: dict[str, AttributeSpec] = {
     "ideology_score": AttributeSpec(
