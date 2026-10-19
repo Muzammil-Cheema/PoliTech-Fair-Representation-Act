@@ -11,7 +11,11 @@ import streamlit as st
 
 from MMD_Generation_Layer import config as project_config
 from MMD_Generation_Layer.Processor.runtime_setup import load_dashboard_run_metadata
-from MMD_Generation_Layer.Processor.seat_allocation import SEAT_ALLOCATION_LABEL, SEAT_ALLOCATION_METHOD
+from MMD_Generation_Layer.Processor.seat_allocation import (
+    SEAT_ALLOCATION_LABEL,
+    SEAT_ALLOCATION_METHOD,
+    democratic_vote_share,
+)
 
 PROXY_CAPTION = (
     f"Seat counts use the **{SEAT_ALLOCATION_LABEL.lower()}**: each district's seats are split "
@@ -46,19 +50,24 @@ def load_ensemble_results(csv_path: str) -> pd.DataFrame:
 
 
 @st.cache_data
-def load_shapefile(shape_path: str, id_col: str, geom_col: str) -> gpd.GeoDataFrame:
-    """Load geodata for map rendering."""
+def load_shapefile(
+    shape_path: str, id_col: str, geom_col: str, dem_col: str, rep_col: str
+) -> gpd.GeoDataFrame:
+    """Load geodata for map rendering, plus precinct Democratic and Republican votes."""
     gdf = gpd.read_file(shape_path)
 
-    if id_col not in gdf.columns:
-        raise ValueError(f"Missing required ID column '{id_col}' in shapefile")
+    missing = {id_col, dem_col, rep_col} - set(gdf.columns)
+    if missing:
+        raise ValueError(f"Missing required columns {sorted(missing)} in shapefile")
 
     if geom_col in gdf.columns and gdf.geometry.name != geom_col:
         gdf = gdf.set_geometry(geom_col)
 
-    keep_cols = [id_col, gdf.geometry.name]
+    keep_cols = [id_col, dem_col, rep_col, gdf.geometry.name]
     gdf = gdf[keep_cols].copy()
     gdf[id_col] = gdf[id_col].astype(str)
+    for vote_col in (dem_col, rep_col):
+        gdf[vote_col] = pd.to_numeric(gdf[vote_col], errors="coerce").fillna(0).astype(int)
     return gdf
 
 
@@ -232,7 +241,13 @@ def main():
             str(dashboard_metadata.shape_path),
             dashboard_metadata.id_column,
             dashboard_metadata.geom_column,
+            dashboard_metadata.dem_column,
+            dashboard_metadata.rep_column,
         )
+    statewide_dem_vote_share = democratic_vote_share(
+        int(gdf[dashboard_metadata.dem_column].sum()),
+        int(gdf[dashboard_metadata.rep_column].sum()),
+    )
 
     st.success(f"✅ Loaded {len(results_df)} plans with {len(gdf)} precincts")
 
@@ -274,6 +289,11 @@ def main():
     st.sidebar.metric("Democratic Seats", f"{int(selected_plan['dem_seats'])}/{total_seats}")
     st.sidebar.metric("Republican Seats", f"{int(selected_plan['rep_seats'])}/{total_seats}")
     st.sidebar.metric("Dem Seat Share", f"{selected_plan['dem_seat_share']:.1%}")
+    st.sidebar.metric(
+        "Dem Vote Share (statewide)",
+        f"{float(statewide_dem_vote_share):.1%}",
+        help="Democratic share of statewide major-party votes; the same for every plan.",
+    )
 
     col1, col2 = st.columns([2, 1])
 

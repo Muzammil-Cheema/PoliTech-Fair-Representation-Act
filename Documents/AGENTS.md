@@ -244,7 +244,7 @@ This file must be updated after **every LLM-authored code change** so the docume
   - `REMOVED_RUN_CONFIG_KEYS` (`mmd_smd_multiplier`, `mmd_plans_per_smd_plan`, `max_mmd_attempts_per_smd_plan`, `save_intermediate_smd_plans`) are rejected in either mode with a GerryChain 1.0.0 migration message.
   - Classes:
     - `RunConfig`
-    - `DashboardRunMetadata`
+    - `DashboardRunMetadata` (includes `dem_column` and `rep_column`; metadata saved before those keys existed falls back to `config.py` vote columns)
   - Functions:
     - `load_dashboard_run_metadata(output_dir=None)`
     - `default_run_config()`
@@ -321,17 +321,18 @@ This file must be updated after **every LLM-authored code change** so the docume
   - Streamlit dashboard for existing baseline outputs.
   - Reads all run-specific values and artifact paths through `DashboardRunMetadata` rather than importing path values directly from `config.py`.
   - Reloads `baseline_ensemble.csv` on every dashboard rerun so overwritten outputs update plan choices and statistics; shapefile loading remains cached.
+  - Sidebar shows the statewide Democratic share of major-party votes (`Dem Vote Share (statewide)`) below the plan's seat share; it is the same for every plan.
   - Labels seat counts as the vote-share proxy (`PROXY_CAPTION`), uses `total_seats` from the CSV as the seat denominator, and warns when the CSV has no `seat_allocation_method` column (pre-proxy winner-take-all outputs).
   - Functions:
     - `load_ensemble_results(csv_path: str) -> pd.DataFrame`
-    - `load_shapefile(shape_path: str, id_col: str = ID_COLUMN) -> gpd.GeoDataFrame`
+    - `load_shapefile(shape_path: str, id_col: str, geom_col: str, dem_col: str, rep_col: str) -> gpd.GeoDataFrame` (keeps precinct Democratic and Republican votes for the statewide vote share)
     - `load_plan_assignment(plan_id: int, plans_dir: Path) -> dict[str, int] | None`
     - `create_district_map(...)`
     - `plot_baseline_histogram(results_df: pd.DataFrame, output_dir: Path, total_seats: int, num_plans: int)`
     - `main()`
 - `MMD_Generation_Layer/Outputs/<STATE>/` (one folder per state, named after the shapefile directory; `RunConfig` output paths resolve here)
   - `baseline_ensemble.csv`: summary rows with `plan_id`, `dem_seats`, `rep_seats`, `dem_seat_share`, `total_seats`, and `seat_allocation_method` (`vote_share_proxy`); `MMD` runs also include `chain_step`.
-  - `run_metadata.json`: resolved run fields the dashboard reads back, plus the seat-allocation method and label.
+  - `run_metadata.json`: resolved run fields the dashboard reads back (including `dem_column` and `rep_column`), plus the seat-allocation method and label.
   - `baseline_districts_plan_*.csv`: optional per-district proxy seat breakdowns (`--district-csvs`).
   - `seed_plan.json`: optional `MMD` seed plan (`seat_vector`, `members_per_district`, `assignment`), written when `save_seed_plan` is true.
   - `seat_share.png`: pipeline-generated Democratic seat-share histogram (vote-share proxy).

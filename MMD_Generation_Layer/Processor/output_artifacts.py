@@ -39,6 +39,8 @@ def save_run_metadata(run_config: RunConfig) -> Path:
         "num_plans": run_config.num_plans,
         "id_column": run_config.id_column,
         "geom_column": run_config.geom_column,
+        "dem_column": run_config.dem_column,
+        "rep_column": run_config.rep_column,
         "seat_allocation_method": SEAT_ALLOCATION_METHOD,
         "seat_allocation_label": SEAT_ALLOCATION_LABEL,
     }
