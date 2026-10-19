@@ -33,6 +33,8 @@ def test_generate_baseline_ensemble_returns_requested_smd_plans() -> None:
         assert set(plan["assignment"]) == set(graph.nodes)
         assert set(plan["assignment"].values()) == {0, 1, 2, 3}
         assert plan["results"]["dem_seats"] + plan["results"]["rep_seats"] == 4
+        assert plan["results"]["total_seats"] == 4
+        assert plan["results"]["seat_allocation_method"] == "vote_share_proxy"
 
 
 def test_generate_baseline_ensemble_is_reproducible_for_same_seed() -> None:
