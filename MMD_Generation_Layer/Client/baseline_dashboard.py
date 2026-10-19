@@ -11,6 +11,15 @@ import streamlit as st
 
 from MMD_Generation_Layer import config as project_config
 from MMD_Generation_Layer.Processor.runtime_setup import load_dashboard_run_metadata
+from MMD_Generation_Layer.Processor.seat_allocation import SEAT_ALLOCATION_LABEL, SEAT_ALLOCATION_METHOD
+
+PROXY_CAPTION = (
+    f"Seat counts use the **{SEAT_ALLOCATION_LABEL.lower()}**: each district's seats are split "
+    "by its Democratic share of major-party votes, `round(seats × dem_votes / (dem_votes + rep_votes))`, "
+    "and Republicans get the rest. Exact half seats round to the even Democratic count; districts with "
+    "no major-party votes count as an even split. This approximates representation from single-choice "
+    "vote totals and is not FRA ranked-choice tabulation."
+)
 
 
 def discover_available_states(outputs_root: Path) -> list[str]:
@@ -141,9 +150,9 @@ def create_district_map(
 
 
 def plot_baseline_histogram(
-    results_df: pd.DataFrame, output_dir: Path, num_districts: int, num_plans: int
+    results_df: pd.DataFrame, output_dir: Path, total_seats: int, num_plans: int
 ):
-    """Create and save histogram of Democratic seat distribution."""
+    """Create and save histogram of Democratic vote-share proxy seat counts."""
     fig, ax = plt.subplots(figsize=(10, 6))
 
     bins = range(results_df["dem_seats"].min(), results_df["dem_seats"].max() + 2)
@@ -165,15 +174,18 @@ def plot_baseline_histogram(
         label=f"Mean: {mean_seats:.2f}",
     )
 
-    ax.set_xlabel(f"Democratic Seats (out of {num_districts})", fontsize=12, fontweight="bold")
+    ax.set_xlabel(
+        f"Democratic Seats (out of {total_seats}, vote-share proxy)", fontsize=12, fontweight="bold"
+    )
     ax.set_ylabel("Frequency (Number of Plans)", fontsize=12, fontweight="bold")
     ax.set_title(
-        f"Baseline Ensemble: Democratic Seat Distribution\n({num_plans} Random Single-Member District Plans)",
+        f"Baseline Ensemble: Democratic Seat Distribution\n({num_plans} Random District Plans, "
+        f"{SEAT_ALLOCATION_LABEL})",
         fontsize=14,
         fontweight="bold",
         pad=20,
     )
-    ax.set_xticks(range(0, num_districts + 1))
+    ax.set_xticks(range(0, total_seats + 1))
     ax.grid(True, alpha=0.3, axis="y")
     ax.legend(fontsize=11, loc="upper right")
     plt.tight_layout()
@@ -224,6 +236,24 @@ def main():
 
     st.success(f"✅ Loaded {len(results_df)} plans with {len(gdf)} precincts")
 
+    uses_proxy = (
+        "seat_allocation_method" in results_df.columns
+        and (results_df["seat_allocation_method"] == SEAT_ALLOCATION_METHOD).all()
+    )
+    if uses_proxy:
+        st.info(PROXY_CAPTION)
+    else:
+        st.warning(
+            "⚠️ These outputs predate the vote-share proxy, so their seat counts are winner-take-all "
+            "per district. Re-run the MMD pipeline for this state to get proxy seat counts."
+        )
+
+    total_seats = (
+        int(results_df["total_seats"].iloc[0])
+        if "total_seats" in results_df.columns
+        else dashboard_metadata.num_districts
+    )
+
     st.sidebar.header("📊 Plan Selection")
     plan_id = st.sidebar.selectbox(
         "Choose a plan to visualize:",
@@ -240,12 +270,9 @@ def main():
 
     st.sidebar.markdown("---")
     st.sidebar.subheader(f"Plan {plan_id} Results")
-    st.sidebar.metric(
-        "Democratic Seats", f"{selected_plan['dem_seats']}/{dashboard_metadata.num_districts}"
-    )
-    st.sidebar.metric(
-        "Republican Seats", f"{selected_plan['rep_seats']}/{dashboard_metadata.num_districts}"
-    )
+    st.sidebar.caption(SEAT_ALLOCATION_LABEL)
+    st.sidebar.metric("Democratic Seats", f"{int(selected_plan['dem_seats'])}/{total_seats}")
+    st.sidebar.metric("Republican Seats", f"{int(selected_plan['rep_seats'])}/{total_seats}")
     st.sidebar.metric("Dem Seat Share", f"{selected_plan['dem_seat_share']:.1%}")
 
     col1, col2 = st.columns([2, 1])
@@ -264,7 +291,7 @@ def main():
             plt.close(fig_map)
 
     with col2:
-        st.subheader("📈 Seat Distribution")
+        st.subheader("📈 Seat Distribution (Vote-Share Proxy)")
 
         fig_pie, ax_pie = plt.subplots(figsize=(6, 6))
         colors_pie = ["#4A90E2", "#E24A4A"]
@@ -282,11 +309,11 @@ def main():
 
         st.markdown("#### Summary Stats")
         summary_data = {
-            "Metric": ["Dem Seats", "Rep Seats", "Total Districts", "Dem Share"],
+            "Metric": ["Dem Seats", "Rep Seats", "Total Seats", "Dem Seat Share"],
             "Value": [
                 selected_plan["dem_seats"],
                 selected_plan["rep_seats"],
-                dashboard_metadata.num_districts,
+                total_seats,
                 f"{selected_plan['dem_seat_share']:.3f}",
             ],
         }
@@ -298,7 +325,7 @@ def main():
     fig_hist, hist_output_path = plot_baseline_histogram(
         results_df,
         dashboard_metadata.output_dir,
-        dashboard_metadata.num_districts,
+        total_seats,
         dashboard_metadata.num_plans,
     )
     st.pyplot(fig_hist)
@@ -340,7 +367,8 @@ def main():
         """
         **About This Analysis:**
         - Generated {0} random district plans using GerryChain's ReCom algorithm
-        - Each district uses **winner-take-all** (plurality voting)
+        - Seats use an **interim vote-share proxy**: each district's seats are split by its
+          Democratic share of major-party votes (not FRA ranked-choice tabulation)
         - Population deviation constrained to ±5%
         - All districts are contiguous
 
