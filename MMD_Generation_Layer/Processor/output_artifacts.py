@@ -153,10 +153,12 @@ def generate_district_csvs(
     rep_col: str = project_config.REP_COLUMN,
     seats_per_district: Mapping[int, int] | None = None,
 ) -> bool:
-    """Generate district-level CSV files with vote-share proxy seats for all saved plan assignments.
+    """Generate per-plan district CSVs with vote-share proxy seats under ``output_dir / 'districts'``.
 
     ``seats_per_district`` maps district labels to seat counts; districts not listed get one seat.
     """
+    districts_dir = output_dir / "districts"
+    districts_dir.mkdir(parents=True, exist_ok=True)
     seats_per_district = seats_per_district or {}
     precinct_dem = gdf[dem_col].rename(index=str).to_dict()
     precinct_rep = gdf[rep_col].rename(index=str).to_dict()
@@ -200,7 +202,7 @@ def generate_district_csvs(
                 }
             )
 
-        output_path = output_dir / f"baseline_districts_plan_{plan_id}.csv"
+        output_path = districts_dir / f"baseline_districts_plan_{plan_id}.csv"
         pd.DataFrame(district_results).to_csv(output_path, index=False)
         info(f"Saved {len(district_results)} districts to {output_path.name}")
 

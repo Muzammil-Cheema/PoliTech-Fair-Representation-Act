@@ -118,7 +118,7 @@ def test_aggregate_district_votes_sums_precincts_per_district() -> None:
 
 
 def test_generate_district_csvs_writes_proxy_seats(tmp_path: Path) -> None:
-    """District CSVs report proxy seats per district using the run's seat counts."""
+    """District CSVs are written under districts/ with the run's proxy seat counts."""
     pd = pytest.importorskip("pandas")
     pytest.importorskip("geopandas")
     from MMD_Generation_Layer.Processor.output_artifacts import generate_district_csvs
@@ -145,7 +145,8 @@ def test_generate_district_csvs_writes_proxy_seats(tmp_path: Path) -> None:
         seats_per_district={0: 3, 1: 2, 2: 3},
     )
 
-    rows = pd.read_csv(tmp_path / "baseline_districts_plan_1.csv").to_dict("records")
+    assert not (tmp_path / "baseline_districts_plan_1.csv").exists()
+    rows = pd.read_csv(tmp_path / "districts" / "baseline_districts_plan_1.csv").to_dict("records")
     assert [(row["district_id"], row["seat_count"], row["dem_seats"], row["rep_seats"]) for row in rows] == [
         (0, 3, 2, 1),  # 100/200 = 0.5 share -> 1.5 seats -> 2 (half to even)
         (1, 2, 0, 2),  # 10/40 = 0.25 share -> 0.5 seats -> 0 (half to even)

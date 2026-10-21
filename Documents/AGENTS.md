@@ -299,6 +299,7 @@ This file must be updated after **every LLM-authored code change** so the docume
   - The seed record holds `seat_vector`, `members_per_district`, and the seed `assignment`.
 - `MMD_Generation_Layer/Processor/output_artifacts.py`
   - Output persistence and optional diagnostic artifacts for generated plans.
+  - `generate_district_csvs(...)` creates `output_dir / "districts"` and writes all per-plan district CSVs there.
   - `run_metadata.json` includes `seat_allocation_method` and `seat_allocation_label`; district CSVs report proxy `seat_count`, `dem_vote_share`, `dem_seats`, `rep_seats`, and `seat_allocation_method` instead of a winner column.
   - Functions:
     - `save_ensemble_summary(ensemble, csv_path)`
@@ -333,7 +334,7 @@ This file must be updated after **every LLM-authored code change** so the docume
 - `MMD_Generation_Layer/Outputs/<STATE>/` (one folder per state, named after the shapefile directory; `RunConfig` output paths resolve here)
   - `baseline_ensemble.csv`: summary rows with `plan_id`, `dem_seats`, `rep_seats`, `dem_seat_share`, `total_seats`, and `seat_allocation_method` (`vote_share_proxy`); `MMD` runs also include `chain_step`.
   - `run_metadata.json`: resolved run fields the dashboard reads back (including `dem_column` and `rep_column`), plus the seat-allocation method and label.
-  - `baseline_districts_plan_*.csv`: optional per-district proxy seat breakdowns (`--district-csvs`).
+  - `districts/baseline_districts_plan_*.csv`: optional per-district proxy seat breakdowns (`--district-csvs`).
   - `seed_plan.json`: optional `MMD` seed plan (`seat_vector`, `members_per_district`, `assignment`), written when `save_seed_plan` is true.
   - `seat_share.png`: pipeline-generated Democratic seat-share histogram (vote-share proxy).
   - `democratic_seats.png`: dashboard-generated Democratic seat-count histogram (vote-share proxy).

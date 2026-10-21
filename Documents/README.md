@@ -43,7 +43,7 @@ The CLI options are:
 | --- | --- |
 | `--config PATH`, `-c PATH` | Load an optional JSON run configuration. |
 | `--skip-plots` | Generate plans and tabular artifacts without the optional seat-share histogram. |
-| `--district-csvs` | Write district-level CSV diagnostics after saving assignments. |
+| `--district-csvs` | Write district-level CSV diagnostics to `Outputs/<STATE>/districts/` after saving assignments. |
 | `--dashboard` | Generate artifacts, then launch the Streamlit dashboard. |
 | `--dashboard-only` | Launch the dashboard without generating new plans. |
 | `--` followed by Streamlit arguments | Pass additional arguments to Streamlit. |
@@ -166,7 +166,7 @@ MMD_Generation_Layer/Outputs/<STATE>/
   seat_share.png
   Plan_Assignments/plan_<id>.json
   seed_plan.json                                   # optional, MMD with save_seed_plan
-  baseline_districts_plan_<id>.csv                 # optional
+  districts/baseline_districts_plan_<id>.csv       # optional, --district-csvs
 ```
 
 Generated MMD outputs are ignored by the root `.gitignore`. The assignment JSON files map precinct IDs to district IDs and must not be passed directly to the simulation layer as election JSON.
