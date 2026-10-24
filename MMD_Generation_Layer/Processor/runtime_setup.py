@@ -87,6 +87,8 @@ class DashboardRunMetadata:
     num_plans: int
     id_column: str
     geom_column: str
+    dem_column: str
+    rep_column: str
     output_dir: Path
     plans_dir: Path
     ensemble_csv_path: Path
@@ -110,6 +112,9 @@ def load_dashboard_run_metadata(output_dir: Path | None = None) -> DashboardRunM
             num_plans=int(metadata["num_plans"]),
             id_column=str(metadata["id_column"]),
             geom_column=str(metadata["geom_column"]),
+            # Runs saved before these keys existed used the config.py vote columns.
+            dem_column=str(metadata.get("dem_column", project_config.DEM_COLUMN)),
+            rep_column=str(metadata.get("rep_column", project_config.REP_COLUMN)),
             output_dir=output_dir,
             plans_dir=plans_dir,
             ensemble_csv_path=ensemble_csv_path,
@@ -122,6 +127,8 @@ def load_dashboard_run_metadata(output_dir: Path | None = None) -> DashboardRunM
         num_plans=project_config.NUM_PLANS,
         id_column=project_config.ID_COLUMN,
         geom_column=project_config.GEOM_COLUMN,
+        dem_column=project_config.DEM_COLUMN,
+        rep_column=project_config.REP_COLUMN,
         output_dir=output_dir,
         plans_dir=plans_dir,
         ensemble_csv_path=ensemble_csv_path,

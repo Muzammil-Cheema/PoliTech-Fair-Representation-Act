@@ -3,15 +3,23 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib.colors import to_hex
 
 from Global_Utilities import info, success
 from MMD_Generation_Layer import config as project_config
 from MMD_Generation_Layer.Processor.runtime_setup import RunConfig
+from MMD_Generation_Layer.Processor.seat_allocation import (
+    SEAT_ALLOCATION_LABEL,
+    SEAT_ALLOCATION_METHOD,
+    aggregate_district_votes,
+    allocate_proxy_seats,
+)
 
 
 def save_ensemble_summary(ensemble: list[dict], csv_path: Path) -> pd.DataFrame:
@@ -32,12 +40,32 @@ def save_run_metadata(run_config: RunConfig) -> Path:
         "num_plans": run_config.num_plans,
         "id_column": run_config.id_column,
         "geom_column": run_config.geom_column,
+        "dem_column": run_config.dem_column,
+        "rep_column": run_config.rep_column,
+        "seat_allocation_method": SEAT_ALLOCATION_METHOD,
+        "seat_allocation_label": SEAT_ALLOCATION_LABEL,
     }
     metadata_path = run_config.output_dir / "run_metadata.json"
     with metadata_path.open("w") as file:
         json.dump(metadata, file, indent=2)
     success(f"Saved run metadata: {metadata_path}")
     return metadata_path
+
+
+def district_seat_counts(run_config: RunConfig) -> dict[int, int]:
+    """Return seats per district label: ``seat_vector`` for MMD runs, one seat each for SMD runs."""
+    if run_config.generation_mode == "MMD":
+        return {district_id: int(seats) for district_id, seats in enumerate(run_config.seat_vector)}
+    return {district_id: 1 for district_id in range(run_config.num_districts)}
+
+
+def district_color_map(district_ids: Iterable[int]) -> dict[int, str]:
+    """Assign sorted district IDs shared map/CSV hex colors; tab20 repeats after 20 districts."""
+    palette = plt.get_cmap("tab20")
+    return {
+        district_id: to_hex(palette(index % palette.N))
+        for index, district_id in enumerate(sorted(set(district_ids)))
+    }
 
 
 def save_plan_assignments(
@@ -82,7 +110,7 @@ def save_seed_plan(seed_record: dict, seed_plan_path: Path) -> Path:
 
 
 def plot_seat_share_histogram(results_df: pd.DataFrame, output_path: Path) -> None:
-    """Create and save a Democratic seat-share histogram."""
+    """Create and save a histogram of Democratic vote-share proxy seat shares."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     plt.figure(figsize=(10, 6))
@@ -93,7 +121,7 @@ def plot_seat_share_histogram(results_df: pd.DataFrame, output_path: Path) -> No
         alpha=0.7,
         color="steelblue",
     )
-    plt.xlabel("Democratic Seat Share", fontsize=12)
+    plt.xlabel("Democratic Seat Share (vote-share proxy)", fontsize=12)
     plt.ylabel("Frequency", fontsize=12)
 
     plan_count = len(results_df)
@@ -105,7 +133,8 @@ def plot_seat_share_histogram(results_df: pd.DataFrame, output_path: Path) -> No
     plt.title(
         (
             "Ensemble: Democratic Seat Share Distribution\n"
-            f"({plan_count} Random District Plans, {total_seats} Total Seats)"
+            f"({plan_count} Random District Plans, {total_seats} Total Seats)\n"
+            f"{SEAT_ALLOCATION_LABEL}"
         ),
         fontsize=14,
         fontweight="bold",
@@ -132,8 +161,20 @@ def generate_district_csvs(
     pop_col: str = project_config.POP_COLUMN,
     dem_col: str = project_config.DEM_COLUMN,
     rep_col: str = project_config.REP_COLUMN,
+    seats_per_district: Mapping[int, int] | None = None,
 ) -> bool:
-    """Generate district-level CSV files for all saved plan assignments."""
+    """Generate per-plan district CSVs with vote-share proxy seats under ``output_dir / 'districts'``.
+
+    ``seats_per_district`` maps district labels to seat counts; districts not listed get one seat.
+    The ``color`` column contains the hex fill color used by the dashboard map.
+    """
+    districts_dir = output_dir / "districts"
+    districts_dir.mkdir(parents=True, exist_ok=True)
+    seats_per_district = seats_per_district or {}
+    precinct_dem = gdf[dem_col].rename(index=str).to_dict()
+    precinct_rep = gdf[rep_col].rename(index=str).to_dict()
+    precinct_pop = gdf[pop_col].rename(index=str).to_dict()
+
     plan_files = sorted(plans_dir.glob("plan_*.json"))
     info(f"Found {len(plan_files)} plan assignment files.")
 
@@ -141,32 +182,40 @@ def generate_district_csvs(
         plan_id = int(plan_file.stem.split("_")[1])
 
         with plan_file.open("r") as file:
-            assignment = json.load(file)
+            assignment = {str(key): int(value) for key, value in json.load(file).items()}
 
-        assignment = {str(key): value for key, value in assignment.items()}
+        colors_by_district = district_color_map(assignment.values())
+        known_assignment = {key: value for key, value in assignment.items() if key in precinct_dem}
+        district_votes = aggregate_district_votes(known_assignment, precinct_dem, precinct_rep)
+        district_population: dict[int, int] = {}
+        for precinct_id, district_id in known_assignment.items():
+            district_population[district_id] = district_population.get(district_id, 0) + int(
+                precinct_pop[precinct_id]
+            )
+
         district_results = []
-
         for district_id in sorted(set(assignment.values())):
-            precinct_ids = [key for key, value in assignment.items() if value == district_id]
-            district_precincts = gdf[gdf.index.isin(precinct_ids)]
-
-            dem_votes = district_precincts[dem_col].sum()
-            rep_votes = district_precincts[rep_col].sum()
-            population = district_precincts[pop_col].sum()
-            winner = "Democrat" if dem_votes > rep_votes else "Republican"
+            dem_votes, rep_votes = district_votes.get(district_id, (0, 0))
+            seat_count = int(seats_per_district.get(district_id, 1))
+            allocation = allocate_proxy_seats(seat_count, dem_votes, rep_votes)
 
             district_results.append(
                 {
                     "plan_id": plan_id,
                     "district_id": district_id,
-                    "dem_votes": int(dem_votes),
-                    "rep_votes": int(rep_votes),
-                    "population": int(population),
-                    "winner": winner,
+                    "color": colors_by_district[district_id],
+                    "dem_votes": dem_votes,
+                    "rep_votes": rep_votes,
+                    "population": district_population.get(district_id, 0),
+                    "seat_count": seat_count,
+                    "dem_vote_share": allocation.dem_vote_share,
+                    "dem_seats": allocation.dem_seats,
+                    "rep_seats": allocation.rep_seats,
+                    "seat_allocation_method": SEAT_ALLOCATION_METHOD,
                 }
             )
 
-        output_path = output_dir / f"baseline_districts_plan_{plan_id}.csv"
+        output_path = districts_dir / f"baseline_districts_plan_{plan_id}.csv"
         pd.DataFrame(district_results).to_csv(output_path, index=False)
         info(f"Saved {len(district_results)} districts to {output_path.name}")
 
@@ -200,6 +249,7 @@ def save_output_artifacts(
             pop_col=run_config.pop_column,
             dem_col=run_config.dem_column,
             rep_col=run_config.rep_column,
+            seats_per_district=district_seat_counts(run_config),
         )
 
     return results_df

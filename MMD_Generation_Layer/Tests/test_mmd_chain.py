@@ -14,6 +14,7 @@ from gerrychain.updaters import Tally
 from MMD_Generation_Layer.Processor.generation_logic import generate_ensemble_for_run
 from MMD_Generation_Layer.Processor.mmd_generation import generate_mmd_ensemble, validate_mmd_partition
 from MMD_Generation_Layer.Processor.runtime_setup import VALID_RECOM_VARIANTS, RunConfig, default_run_config
+from MMD_Generation_Layer.Processor.seat_allocation import SEAT_ALLOCATION_METHOD, allocate_proxy_seats
 
 
 def build_grid_graph(rows: int = 16, cols: int = 16) -> Graph:
@@ -94,10 +95,12 @@ def test_generate_mmd_ensemble_keeps_seat_counts_on_labels(graph: Graph) -> None
         results = plan["results"]
         assert results["dem_seats"] + results["rep_seats"] == results["total_seats"] == 7
         assert results["dem_seat_share"] == results["dem_seats"] / 7
-        expected_dem_seats = sum(
-            summary["seat_count"] for summary in summaries if summary["votes_dem"] > summary["votes_rep"]
-        )
-        assert results["dem_seats"] == expected_dem_seats
+        assert results["seat_allocation_method"] == SEAT_ALLOCATION_METHOD
+        for summary in summaries:
+            allocation = allocate_proxy_seats(summary["seat_count"], summary["votes_dem"], summary["votes_rep"])
+            assert (summary["dem_seats"], summary["rep_seats"]) == allocation[:2]
+            assert summary["dem_seats"] + summary["rep_seats"] == summary["seat_count"]
+        assert results["dem_seats"] == sum(summary["dem_seats"] for summary in summaries)
 
 
 def test_generate_mmd_ensemble_plan_record_shape(graph: Graph) -> None:
@@ -113,6 +116,7 @@ def test_generate_mmd_ensemble_plan_record_shape(graph: Graph) -> None:
         "dem_seat_share",
         "total_seats",
         "chain_step",
+        "seat_allocation_method",
     }
     assert set(plan["district_summaries"][0]) == {
         "district_id",
@@ -120,6 +124,9 @@ def test_generate_mmd_ensemble_plan_record_shape(graph: Graph) -> None:
         "population",
         "votes_dem",
         "votes_rep",
+        "dem_vote_share",
+        "dem_seats",
+        "rep_seats",
     }
 
 

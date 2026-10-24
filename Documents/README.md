@@ -43,7 +43,7 @@ The CLI options are:
 | --- | --- |
 | `--config PATH`, `-c PATH` | Load an optional JSON run configuration. |
 | `--skip-plots` | Generate plans and tabular artifacts without the optional seat-share histogram. |
-| `--district-csvs` | Write district-level CSV diagnostics after saving assignments. |
+| `--district-csvs` | Write district-level CSV diagnostics to `Outputs/<STATE>/districts/` after saving assignments. |
 | `--dashboard` | Generate artifacts, then launch the Streamlit dashboard. |
 | `--dashboard-only` | Launch the dashboard without generating new plans. |
 | `--` followed by Streamlit arguments | Pass additional arguments to Streamlit. |
@@ -127,7 +127,22 @@ Since the GerryChain 1.0.0 migration (issue #34), `SMD` mode builds equal-popula
 5. **Sampling.** The seed is chain step 0 and is never saved. After `burn_in_steps`, every `step_interval`-th plan is saved until `num_plans` plans exist. Defaults (`0`, `1`) save every step; raise them for more independent ensembles.
 6. **Reproducibility.** One `random.Random(seed)` drives the seed plan and the chain, so the same config reproduces the same ensemble.
 
-Seats in `baseline_ensemble.csv` are counted winner-take-all per district. That is a display rule for the ensemble summary, not proportional FRA/STV allocation, which belongs to the simulation layer.
+### Seat counts: interim vote-share proxy
+
+The precinct data has only single-choice Democratic and Republican vote totals, not ranked ballots, so it cannot support a real FRA ranked-choice count. Instead, seats in the MMD outputs are assigned with an **interim vote-share proxy** (`MMD_Generation_Layer/Processor/seat_allocation.py`):
+
+1. Sum Democratic and Republican votes across every precinct in the district.
+2. `dem_vote_share = dem_votes / (dem_votes + rep_votes)`.
+3. `dem_seats = round(available_seats × dem_vote_share)`; Republicans get `available_seats − dem_seats`, so every district uses exactly its seats.
+
+Deterministic edge cases:
+
+- **Exact half seats** are computed with exact fractions (no float error) and round to the even Democratic count, Python's `round`: `0.5 → 0`, `1.5 → 2`, `2.5 → 2`. Exact halves are rare, and this rule does not consistently favor either party.
+- **Districts with zero major-party votes** count as an even `1/2` split, then follow the half-seat rule.
+
+With one seat per district (`SMD` mode), the proxy is plain plurality, and exact vote ties go Republican as before. Outputs are labelled with `seat_allocation_method = "vote_share_proxy"` in `baseline_ensemble.csv`, district CSVs, and `run_metadata.json`, and the dashboard says so as well.
+
+**Limitation:** the proxy does not model ballot rankings, transfers, candidates, or the FRA counting process. It is a better guide than winner-take-all for inspecting multimember plans, but it is not FRA/STV tabulation, which belongs to the simulation layer.
 
 The MMD workflow is usable for exploratory research but remains experimental. Research-grade `recom_variant`, `burn_in_steps`, and `step_interval` choices, runtime, and downstream representational/simulation integration still need further work.
 
@@ -151,7 +166,7 @@ MMD_Generation_Layer/Outputs/<STATE>/
   seat_share.png
   Plan_Assignments/plan_<id>.json
   seed_plan.json                                   # optional, MMD with save_seed_plan
-  baseline_districts_plan_<id>.csv                 # optional
+  districts/baseline_districts_plan_<id>.csv       # optional, --district-csvs
 ```
 
 Generated MMD outputs are ignored by the root `.gitignore`. The assignment JSON files map precinct IDs to district IDs and must not be passed directly to the simulation layer as election JSON.
@@ -181,7 +196,11 @@ Use `--method area` for retained research data when precinct boundaries overlap 
 
 The Streamlit dashboard is `MMD_Generation_Layer/Client/baseline_dashboard.py`. It discovers completed state folders under `MMD_Generation_Layer/Outputs/`, loads each state's run metadata, lets the user select a plan, renders a district map, shows party seat summaries, plots the ensemble's Democratic seat-share distribution, and displays a plan table.
 
-The dashboard is currently a baseline visualization and still contains SMD/winner-take-all-oriented labels and assumptions. It should not be interpreted as a complete MMD/RCV research dashboard until those labels and metrics are updated to distinguish district count from total seat count and to expose the MMD seat vector.
+Each map labels districts with their assignment IDs (for example, `District 0`), matching the `district_id` values in the per-plan district CSVs. The map title reports the actual number of districts rather than the total seat count.
+
+District CSVs also include a `color` column containing the exact map fill hex code (for example, `#1f77b4`). Both the map and CSV writer use the same palette, with 20 distinct colors before colors repeat.
+
+Seat counts on the dashboard come from the vote-share proxy described above and are labelled that way. Outputs generated before the proxy carry winner-take-all seat counts; the dashboard shows a warning for them, and re-running the pipeline for that state updates them. The dashboard is still a baseline visualization: it does not yet expose the MMD seat vector, and it should not be read as an MMD/RCV research dashboard.
 
 ## Representational Layer
 
@@ -286,7 +305,7 @@ Important configuration lives in:
 
 - The MMD output is a district-generation artifact and is not yet consumed directly by the simulation layer.
 - The MMD generator uses GerryChain 1.0.0's native `MultiMemberReCom`; research-grade sampling settings (`recom_variant`, `burn_in_steps`, `step_interval`) and larger-scale performance remain open research work.
-- Seat counts in MMD ensemble summaries are winner-take-all per district, not FRA/STV results.
+- Seat counts in MMD ensemble summaries use an interim vote-share proxy built from single-choice partisan totals, not FRA/STV results from ranked ballots.
 - The included precinct data currently contain population and election results, but not a completed precinct-level race/ethnicity data product. Demographic data must be reconciled from Census blocks or another validated source before racial-dispersion metrics can be trusted.
 - The population and election vintages are not time-aligned: current runs combine 2020 Census population with 2024 voting data.
 - The current dashboard is a baseline plan viewer, not yet a complete ensemble-wide MMD/RCV analysis interface.

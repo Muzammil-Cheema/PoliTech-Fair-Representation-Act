@@ -21,6 +21,7 @@ from Global_Utilities import info, success, warn
 from MMD_Generation_Layer import config as project_config
 from MMD_Generation_Layer.Processor.output_artifacts import save_seed_plan
 from MMD_Generation_Layer.Processor.runtime_setup import RunConfig
+from MMD_Generation_Layer.Processor.seat_allocation import SEAT_ALLOCATION_METHOD, allocate_proxy_seats
 
 # MMD-only settings and their defaults; SMD runs log when any of these were changed.
 MMD_ONLY_SETTING_DEFAULTS = {
@@ -217,24 +218,21 @@ def generate_baseline_ensemble(
 
     ensemble = []
     for plan_counter, partition in enumerate(chain, start=1):
-        dem_seats = 0
-        rep_seats = 0
-
-        for district in partition.parts:
-            district_dem = partition["votes_dem"][district]
-            district_rep = partition["votes_rep"][district]
-            if district_dem > district_rep:
-                dem_seats += 1
-            else:
-                rep_seats += 1
+        # With one seat per district the proxy matches plurality; exact vote ties go Republican.
+        dem_seats = sum(
+            allocate_proxy_seats(1, partition["votes_dem"][district], partition["votes_rep"][district]).dem_seats
+            for district in partition.parts
+        )
 
         ensemble.append(
             {
                 "results": {
                     "plan_id": plan_counter,
                     "dem_seats": dem_seats,
-                    "rep_seats": rep_seats,
+                    "rep_seats": num_districts - dem_seats,
                     "dem_seat_share": dem_seats / num_districts,
+                    "total_seats": num_districts,
+                    "seat_allocation_method": SEAT_ALLOCATION_METHOD,
                 },
                 "assignment": assignment_by_original_node_id(partition),
             }

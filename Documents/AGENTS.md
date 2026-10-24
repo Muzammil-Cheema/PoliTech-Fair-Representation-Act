@@ -244,7 +244,7 @@ This file must be updated after **every LLM-authored code change** so the docume
   - `REMOVED_RUN_CONFIG_KEYS` (`mmd_smd_multiplier`, `mmd_plans_per_smd_plan`, `max_mmd_attempts_per_smd_plan`, `save_intermediate_smd_plans`) are rejected in either mode with a GerryChain 1.0.0 migration message.
   - Classes:
     - `RunConfig`
-    - `DashboardRunMetadata`
+    - `DashboardRunMetadata` (includes `dem_column` and `rep_column`; metadata saved before those keys existed falls back to `config.py` vote columns)
   - Functions:
     - `load_dashboard_run_metadata(output_dir=None)`
     - `default_run_config()`
@@ -285,16 +285,32 @@ This file must be updated after **every LLM-authored code change** so the docume
     - `_build_plan_record(partition, members_per_district, plan_id, chain_step)`
     - `generate_mmd_ensemble(graph, run_config) -> tuple[list[dict], dict]`
   - `generate_mmd_ensemble` runs `MultiMemberReCom.<recom_variant>` with `contiguous` and `within_percent_of_ideal_population_per_member` constraints from the validated seed. The seed is chain step 0 and is never saved; after `burn_in_steps`, every `step_interval`-th step is saved until `num_plans` plans exist (`total_steps = burn_in_steps + num_plans * step_interval + 1`). One `random.Random(seed)` drives the seed and the chain.
-  - Plan records: `results` (`plan_id`, `dem_seats`, `rep_seats`, `dem_seat_share`, `total_seats`, `chain_step`), `assignment` (precinct ID to district label), and `district_summaries` (`district_id`, `seat_count`, `population`, `votes_dem`, `votes_rep`). Seats are counted winner-take-all per district, weighted by seat count.
+  - Plan records: `results` (`plan_id`, `dem_seats`, `rep_seats`, `dem_seat_share`, `total_seats`, `chain_step`, `seat_allocation_method`), `assignment` (precinct ID to district label), and `district_summaries` (`district_id`, `seat_count`, `population`, `votes_dem`, `votes_rep`, `dem_vote_share`, `dem_seats`, `rep_seats`). Each district's seats are split by the vote-share proxy in `seat_allocation.py`.
+- `MMD_Generation_Layer/Processor/seat_allocation.py`
+  - Interim vote-share proxy that splits district seats between parties; it is not FRA ranked-choice tabulation. No GerryChain dependency.
+  - `dem_seats = round(available_seats * votes_dem / (votes_dem + votes_rep))`, Republicans get the remainder, so the split always totals `available_seats`.
+  - Exact half seats are computed with `Fraction` and round half to even on the Democratic count (`1.5 -> 2`, `2.5 -> 2`); zero major-party votes count as a `1/2` share.
+  - Used by both `MMD` plan records and the `SMD` baseline (one seat per district, where it equals plurality with exact ties to Republicans) and by district CSVs.
+  - Functions:
+    - `democratic_vote_share(votes_dem, votes_rep) -> Fraction`
+    - `allocate_proxy_seats(available_seats, votes_dem, votes_rep) -> ProxySeatAllocation`
+    - `aggregate_district_votes(assignment, votes_dem, votes_rep) -> dict[district_id, tuple[int, int]]`
+  - Class: `ProxySeatAllocation` (`NamedTuple`: `dem_seats`, `rep_seats`, `dem_vote_share`).
   - The seed record holds `seat_vector`, `members_per_district`, and the seed `assignment`.
 - `MMD_Generation_Layer/Processor/output_artifacts.py`
   - Output persistence and optional diagnostic artifacts for generated plans.
+  - `generate_district_csvs(...)` creates `output_dir / "districts"` and writes all per-plan district CSVs there.
+  - `district_color_map(...)` supplies both map fills and each district CSV's `color` hex code from the same tab20 palette (20 distinct colors, then repeats).
+  - `run_metadata.json` includes `seat_allocation_method` and `seat_allocation_label`; district CSVs report proxy `seat_count`, `dem_vote_share`, `dem_seats`, `rep_seats`, and `seat_allocation_method` instead of a winner column.
   - Functions:
     - `save_ensemble_summary(ensemble, csv_path)`
+    - `save_run_metadata(run_config)`
+    - `district_seat_counts(run_config) -> dict[int, int]` (`seat_vector` for `MMD`, one seat per district for `SMD`)
+    - `district_color_map(district_ids) -> dict[int, str]`
     - `save_plan_assignments(ensemble, plans_dir, clear_existing=True)`
     - `save_seed_plan(seed_record, seed_plan_path)`
     - `plot_seat_share_histogram(results_df, output_path)`
-    - `generate_district_csvs(gdf, plans_dir, output_dir)`
+    - `generate_district_csvs(gdf, plans_dir, output_dir, pop_col, dem_col, rep_col, seats_per_district=None)`
     - `save_output_artifacts(ensemble, run_config, gdf=None, include_plots=True, include_district_csvs=False)`
 - `MMD_Generation_Layer/Processor/main.py`
   - Script entrypoint for running generation and optionally launching Streamlit.
@@ -308,21 +324,27 @@ This file must be updated after **every LLM-authored code change** so the docume
   - Streamlit dashboard for existing baseline outputs.
   - Reads all run-specific values and artifact paths through `DashboardRunMetadata` rather than importing path values directly from `config.py`.
   - Reloads `baseline_ensemble.csv` on every dashboard rerun so overwritten outputs update plan choices and statistics; shapefile loading remains cached.
+  - District maps label each district at an interior representative point with its assignment ID, matching `district_id` in district CSVs; map titles show the actual mapped district count.
+  - Dissolved and precinct-level map rendering use `district_color_map(...)` to match the CSV `color` column exactly.
+  - Sidebar shows the statewide Democratic share of major-party votes (`Dem Vote Share (statewide)`) below the plan's seat share; it is the same for every plan.
+  - Labels seat counts as the vote-share proxy (`PROXY_CAPTION`), uses `total_seats` from the CSV as the seat denominator, and warns when the CSV has no `seat_allocation_method` column (pre-proxy winner-take-all outputs).
   - Functions:
     - `load_ensemble_results(csv_path: str) -> pd.DataFrame`
-    - `load_shapefile(shape_path: str, id_col: str = ID_COLUMN) -> gpd.GeoDataFrame`
+    - `load_shapefile(shape_path: str, id_col: str, geom_col: str, dem_col: str, rep_col: str) -> gpd.GeoDataFrame` (keeps precinct Democratic and Republican votes for the statewide vote share)
     - `load_plan_assignment(plan_id: int, plans_dir: Path) -> dict[str, int] | None`
     - `create_district_map(...)`
-    - `plot_baseline_histogram(results_df: pd.DataFrame, output_dir: Path)`
+    - `plot_baseline_histogram(results_df: pd.DataFrame, output_dir: Path, total_seats: int, num_plans: int)`
     - `main()`
 - `MMD_Generation_Layer/Outputs/<STATE>/` (one folder per state, named after the shapefile directory; `RunConfig` output paths resolve here)
-  - `baseline_ensemble.csv`: summary rows with `plan_id`, `dem_seats`, `rep_seats`, and `dem_seat_share`; `MMD` runs also include `total_seats` and `chain_step`.
+  - `baseline_ensemble.csv`: summary rows with `plan_id`, `dem_seats`, `rep_seats`, `dem_seat_share`, `total_seats`, and `seat_allocation_method` (`vote_share_proxy`); `MMD` runs also include `chain_step`.
+  - `run_metadata.json`: resolved run fields the dashboard reads back (including `dem_column` and `rep_column`), plus the seat-allocation method and label.
+  - `districts/baseline_districts_plan_*.csv`: optional per-district proxy seat breakdowns and map fill hex codes in `color` (`--district-csvs`).
   - `seed_plan.json`: optional `MMD` seed plan (`seat_vector`, `members_per_district`, `assignment`), written when `save_seed_plan` is true.
-  - `seat_share.png`: notebook-generated Democratic seat-share histogram.
-  - `democratic_seats.png`: dashboard-generated Democratic seat-count histogram.
+  - `seat_share.png`: pipeline-generated Democratic seat-share histogram (vote-share proxy).
+  - `democratic_seats.png`: dashboard-generated Democratic seat-count histogram (vote-share proxy).
   - `Plan_Assignments/plan_*.json`: precinct ID to district ID assignment maps.
 - `MMD_Generation_Layer/Tests/`
-  - Pytest suite for the MMD layer. Every module except `test_mmd_run_config.py` starts with `pytest.importorskip("gerrychain")`, so installs without the `mmd` extra skip them. Graph-based tests use small synthetic grids keyed by string precinct IDs (like real shapefiles) with varied populations, because perfectly uniform grids make tight-tolerance seat-proportional cuts artificially rare.
+  - Pytest suite for the MMD layer. Graph-based modules use `pytest.importorskip("gerrychain")`; config tests run without the `mmd` extra, and seat-allocation and district-map tests skip unavailable optional dependencies as needed. Graph-based tests use small synthetic grids keyed by string precinct IDs (like real shapefiles) with varied populations, because perfectly uniform grids make tight-tolerance seat-proportional cuts artificially rare.
   - `test_graph_loading.py`: `load_and_build_graph(...)` builds a precinct graph from a tiny shapefile and sets `population`, `votes_dem`, and `votes_rep` through the GerryChain 1.0.0 graph API.
     - Helper: `write_two_by_two_precincts(path) -> Path`
   - `test_smd_generation.py`: SMD ReCom path returns the requested plans keyed by original precinct IDs and is reproducible for a fixed seed.
@@ -331,6 +353,8 @@ This file must be updated after **every LLM-authored code change** so the docume
     - Helpers: `build_grid_graph(rows=16, cols=16, uniform_population=None) -> Graph`, `column_partition(graph, district_for_column) -> Partition`, `seat_populations(graph, assignment, seat_vector) -> dict[int, float]`
   - `test_mmd_chain.py`: `generate_mmd_ensemble(...)` saves exactly `num_plans` valid plans, applies burn-in/step-interval arithmetic, keeps seat counts on labels, keeps the plan and seed record shapes, is reproducible, runs all four `recom_variant`s; `generate_ensemble_for_run(...)` writes `seed_plan.json` only when `save_seed_plan` is true.
     - Helpers: `build_grid_graph(rows=16, cols=16) -> Graph`, `mmd_run_config(**overrides) -> RunConfig`, `plan_partition(graph, plan) -> Partition`; module-scoped `graph` fixture.
+  - `test_seat_allocation.py`: proxy seat allocation for Democratic-majority, Republican-majority, near-even, exact half-seat, multi-seat, and zero-vote districts; every split totals the available seats; invalid inputs raise; district vote aggregation; `generate_district_csvs(...)` writes proxy seats. Runs without GerryChain; only the district-CSV test needs geopandas.
+  - `test_district_maps.py`: verifies CSV colors match rendered district fills and that exact district IDs are labelled inside concave and multipart geometries, with either dissolved or precinct rendering and with precinct lines enabled or disabled.
   - `test_mmd_run_config.py`: every non-`invalid_*` fixture in `Notebook_Run_Configs/` loads and every `invalid_*` fixture raises; checks chain-control defaults and overrides, each validation message, removed temporary-SMD key rejection in both modes, and that `RunConfig` has no temporary-SMD fields.
     - Helper: `mmd_config(**overrides) -> dict`
 - `MMD_Generation_Layer/Tests/Notebook_Run_Configs/`
@@ -555,7 +579,7 @@ This file must be updated after **every LLM-authored code change** so the docume
 - The script modules in `MMD_Generation_Layer/Processor/` are the supported MMD workflow; the legacy notebook does not run under GerryChain 1.0.0.
 - An invalid run config logs the validation error and falls back to `config.py` defaults (NC) instead of stopping the run.
 - Script-based `MMD` generation uses GerryChain 1.0.0's native `MultiMemberReCom`; burn-in and thinning (`burn_in_steps`, `step_interval`) default to keeping every chain step, so tune them for statistically independent ensembles.
-- MMD seat counts in summaries are winner-take-all per multimember district, which is a display rule, not proportional FRA/STV allocation.
+- MMD seat counts use an interim vote-share proxy from single-choice partisan totals (`seat_allocation.py`); they are not FRA/STV results from ranked ballots.
 - Current checked-in MMD outputs may be stale relative to `NUM_DISTRICTS = 14`; verify outputs before relying on them for analysis.
 - Current MMD outputs do not yet create representational-layer `District` objects.
 - Current MMD outputs do not yet feed simulation-layer election JSON directly.
@@ -573,6 +597,10 @@ This file must be updated after **every LLM-authored code change** so the docume
 - `MMD_Generation_Layer/Processor/mmd_generation.py`
   - `SEED_SPLIT_MAX_ATTEMPTS`
   - Internal: `_REMAINDER_LABEL`, `_SEED_ATTEMPT_FAILURES`
+- `MMD_Generation_Layer/Processor/seat_allocation.py`
+  - `SEAT_ALLOCATION_METHOD`, `SEAT_ALLOCATION_LABEL`
+- `MMD_Generation_Layer/Client/baseline_dashboard.py`
+  - `PROXY_CAPTION`
 - `Global_Utilities/logger.py`
   - `RESET`, `BLUE`, `GREEN`, `RED`, `YELLOW`
 - `Simulation_Layer/Core/config.py`

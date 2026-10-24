@@ -27,6 +27,7 @@ from MMD_Generation_Layer.Processor.generation_logic import (
     log_captured_warnings,
 )
 from MMD_Generation_Layer.Processor.runtime_setup import RunConfig
+from MMD_Generation_Layer.Processor.seat_allocation import SEAT_ALLOCATION_METHOD, allocate_proxy_seats
 
 # Spanning trees drawn for one split before a seed attempt gives up and the caller retries.
 # GerryChain's default (100000) would stall for minutes on a statewide graph before retrying.
@@ -215,7 +216,7 @@ def _build_plan_record(
     plan_id: int,
     chain_step: int,
 ) -> dict:
-    """Build the saved plan record; seats are counted winner-take-all per district, by seat count."""
+    """Build the saved plan record; each district's seats are split by the vote-share proxy."""
     total_seats = sum(members_per_district.values())
     district_summaries = []
     dem_seats = 0
@@ -224,8 +225,8 @@ def _build_plan_record(
         seat_count = members_per_district[district_id]
         votes_dem = int(partition["votes_dem"][district_id])
         votes_rep = int(partition["votes_rep"][district_id])
-        if votes_dem > votes_rep:
-            dem_seats += seat_count
+        allocation = allocate_proxy_seats(seat_count, votes_dem, votes_rep)
+        dem_seats += allocation.dem_seats
         district_summaries.append(
             {
                 "district_id": district_id,
@@ -233,6 +234,9 @@ def _build_plan_record(
                 "population": int(partition["population"][district_id]),
                 "votes_dem": votes_dem,
                 "votes_rep": votes_rep,
+                "dem_vote_share": allocation.dem_vote_share,
+                "dem_seats": allocation.dem_seats,
+                "rep_seats": allocation.rep_seats,
             }
         )
 
@@ -244,6 +248,7 @@ def _build_plan_record(
             "dem_seat_share": dem_seats / total_seats,
             "total_seats": total_seats,
             "chain_step": chain_step,
+            "seat_allocation_method": SEAT_ALLOCATION_METHOD,
         },
         "assignment": assignment_by_original_node_id(partition),
         "district_summaries": district_summaries,
