@@ -300,11 +300,13 @@ This file must be updated after **every LLM-authored code change** so the docume
 - `MMD_Generation_Layer/Processor/output_artifacts.py`
   - Output persistence and optional diagnostic artifacts for generated plans.
   - `generate_district_csvs(...)` creates `output_dir / "districts"` and writes all per-plan district CSVs there.
+  - `district_color_map(...)` supplies both map fills and each district CSV's `color` hex code from the same tab20 palette (20 distinct colors, then repeats).
   - `run_metadata.json` includes `seat_allocation_method` and `seat_allocation_label`; district CSVs report proxy `seat_count`, `dem_vote_share`, `dem_seats`, `rep_seats`, and `seat_allocation_method` instead of a winner column.
   - Functions:
     - `save_ensemble_summary(ensemble, csv_path)`
     - `save_run_metadata(run_config)`
     - `district_seat_counts(run_config) -> dict[int, int]` (`seat_vector` for `MMD`, one seat per district for `SMD`)
+    - `district_color_map(district_ids) -> dict[int, str]`
     - `save_plan_assignments(ensemble, plans_dir, clear_existing=True)`
     - `save_seed_plan(seed_record, seed_plan_path)`
     - `plot_seat_share_histogram(results_df, output_path)`
@@ -322,6 +324,8 @@ This file must be updated after **every LLM-authored code change** so the docume
   - Streamlit dashboard for existing baseline outputs.
   - Reads all run-specific values and artifact paths through `DashboardRunMetadata` rather than importing path values directly from `config.py`.
   - Reloads `baseline_ensemble.csv` on every dashboard rerun so overwritten outputs update plan choices and statistics; shapefile loading remains cached.
+  - District maps label each district at an interior representative point with its assignment ID, matching `district_id` in district CSVs; map titles show the actual mapped district count.
+  - Dissolved and precinct-level map rendering use `district_color_map(...)` to match the CSV `color` column exactly.
   - Sidebar shows the statewide Democratic share of major-party votes (`Dem Vote Share (statewide)`) below the plan's seat share; it is the same for every plan.
   - Labels seat counts as the vote-share proxy (`PROXY_CAPTION`), uses `total_seats` from the CSV as the seat denominator, and warns when the CSV has no `seat_allocation_method` column (pre-proxy winner-take-all outputs).
   - Functions:
@@ -334,13 +338,13 @@ This file must be updated after **every LLM-authored code change** so the docume
 - `MMD_Generation_Layer/Outputs/<STATE>/` (one folder per state, named after the shapefile directory; `RunConfig` output paths resolve here)
   - `baseline_ensemble.csv`: summary rows with `plan_id`, `dem_seats`, `rep_seats`, `dem_seat_share`, `total_seats`, and `seat_allocation_method` (`vote_share_proxy`); `MMD` runs also include `chain_step`.
   - `run_metadata.json`: resolved run fields the dashboard reads back (including `dem_column` and `rep_column`), plus the seat-allocation method and label.
-  - `districts/baseline_districts_plan_*.csv`: optional per-district proxy seat breakdowns (`--district-csvs`).
+  - `districts/baseline_districts_plan_*.csv`: optional per-district proxy seat breakdowns and map fill hex codes in `color` (`--district-csvs`).
   - `seed_plan.json`: optional `MMD` seed plan (`seat_vector`, `members_per_district`, `assignment`), written when `save_seed_plan` is true.
   - `seat_share.png`: pipeline-generated Democratic seat-share histogram (vote-share proxy).
   - `democratic_seats.png`: dashboard-generated Democratic seat-count histogram (vote-share proxy).
   - `Plan_Assignments/plan_*.json`: precinct ID to district ID assignment maps.
 - `MMD_Generation_Layer/Tests/`
-  - Pytest suite for the MMD layer. Every module except `test_mmd_run_config.py` starts with `pytest.importorskip("gerrychain")`, so installs without the `mmd` extra skip them. Graph-based tests use small synthetic grids keyed by string precinct IDs (like real shapefiles) with varied populations, because perfectly uniform grids make tight-tolerance seat-proportional cuts artificially rare.
+  - Pytest suite for the MMD layer. Graph-based modules use `pytest.importorskip("gerrychain")`; config tests run without the `mmd` extra, and seat-allocation and district-map tests skip unavailable optional dependencies as needed. Graph-based tests use small synthetic grids keyed by string precinct IDs (like real shapefiles) with varied populations, because perfectly uniform grids make tight-tolerance seat-proportional cuts artificially rare.
   - `test_graph_loading.py`: `load_and_build_graph(...)` builds a precinct graph from a tiny shapefile and sets `population`, `votes_dem`, and `votes_rep` through the GerryChain 1.0.0 graph API.
     - Helper: `write_two_by_two_precincts(path) -> Path`
   - `test_smd_generation.py`: SMD ReCom path returns the requested plans keyed by original precinct IDs and is reproducible for a fixed seed.
@@ -350,6 +354,7 @@ This file must be updated after **every LLM-authored code change** so the docume
   - `test_mmd_chain.py`: `generate_mmd_ensemble(...)` saves exactly `num_plans` valid plans, applies burn-in/step-interval arithmetic, keeps seat counts on labels, keeps the plan and seed record shapes, is reproducible, runs all four `recom_variant`s; `generate_ensemble_for_run(...)` writes `seed_plan.json` only when `save_seed_plan` is true.
     - Helpers: `build_grid_graph(rows=16, cols=16) -> Graph`, `mmd_run_config(**overrides) -> RunConfig`, `plan_partition(graph, plan) -> Partition`; module-scoped `graph` fixture.
   - `test_seat_allocation.py`: proxy seat allocation for Democratic-majority, Republican-majority, near-even, exact half-seat, multi-seat, and zero-vote districts; every split totals the available seats; invalid inputs raise; district vote aggregation; `generate_district_csvs(...)` writes proxy seats. Runs without GerryChain; only the district-CSV test needs geopandas.
+  - `test_district_maps.py`: verifies CSV colors match rendered district fills and that exact district IDs are labelled inside concave and multipart geometries, with either dissolved or precinct rendering and with precinct lines enabled or disabled.
   - `test_mmd_run_config.py`: every non-`invalid_*` fixture in `Notebook_Run_Configs/` loads and every `invalid_*` fixture raises; checks chain-control defaults and overrides, each validation message, removed temporary-SMD key rejection in both modes, and that `RunConfig` has no temporary-SMD fields.
     - Helper: `mmd_config(**overrides) -> dict`
 - `MMD_Generation_Layer/Tests/Notebook_Run_Configs/`

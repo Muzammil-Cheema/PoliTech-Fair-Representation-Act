@@ -196,6 +196,10 @@ Use `--method area` for retained research data when precinct boundaries overlap 
 
 The Streamlit dashboard is `MMD_Generation_Layer/Client/baseline_dashboard.py`. It discovers completed state folders under `MMD_Generation_Layer/Outputs/`, loads each state's run metadata, lets the user select a plan, renders a district map, shows party seat summaries, plots the ensemble's Democratic seat-share distribution, and displays a plan table.
 
+Each map labels districts with their assignment IDs (for example, `District 0`), matching the `district_id` values in the per-plan district CSVs. The map title reports the actual number of districts rather than the total seat count.
+
+District CSVs also include a `color` column containing the exact map fill hex code (for example, `#1f77b4`). Both the map and CSV writer use the same palette, with 20 distinct colors before colors repeat.
+
 Seat counts on the dashboard come from the vote-share proxy described above and are labelled that way. Outputs generated before the proxy carry winner-take-all seat counts; the dashboard shows a warning for them, and re-running the pipeline for that state updates them. The dashboard is still a baseline visualization: it does not yet expose the MMD seat vector, and it should not be read as an MMD/RCV research dashboard.
 
 ## Representational Layer

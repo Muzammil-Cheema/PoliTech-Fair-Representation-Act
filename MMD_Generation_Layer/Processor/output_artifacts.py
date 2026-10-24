@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib.colors import to_hex
 
 from Global_Utilities import info, success
 from MMD_Generation_Layer import config as project_config
@@ -56,6 +57,15 @@ def district_seat_counts(run_config: RunConfig) -> dict[int, int]:
     if run_config.generation_mode == "MMD":
         return {district_id: int(seats) for district_id, seats in enumerate(run_config.seat_vector)}
     return {district_id: 1 for district_id in range(run_config.num_districts)}
+
+
+def district_color_map(district_ids: Iterable[int]) -> dict[int, str]:
+    """Assign sorted district IDs shared map/CSV hex colors; tab20 repeats after 20 districts."""
+    palette = plt.get_cmap("tab20")
+    return {
+        district_id: to_hex(palette(index % palette.N))
+        for index, district_id in enumerate(sorted(set(district_ids)))
+    }
 
 
 def save_plan_assignments(
@@ -156,6 +166,7 @@ def generate_district_csvs(
     """Generate per-plan district CSVs with vote-share proxy seats under ``output_dir / 'districts'``.
 
     ``seats_per_district`` maps district labels to seat counts; districts not listed get one seat.
+    The ``color`` column contains the hex fill color used by the dashboard map.
     """
     districts_dir = output_dir / "districts"
     districts_dir.mkdir(parents=True, exist_ok=True)
@@ -173,6 +184,7 @@ def generate_district_csvs(
         with plan_file.open("r") as file:
             assignment = {str(key): int(value) for key, value in json.load(file).items()}
 
+        colors_by_district = district_color_map(assignment.values())
         known_assignment = {key: value for key, value in assignment.items() if key in precinct_dem}
         district_votes = aggregate_district_votes(known_assignment, precinct_dem, precinct_rep)
         district_population: dict[int, int] = {}
@@ -191,6 +203,7 @@ def generate_district_csvs(
                 {
                     "plan_id": plan_id,
                     "district_id": district_id,
+                    "color": colors_by_district[district_id],
                     "dem_votes": dem_votes,
                     "rep_votes": rep_votes,
                     "population": district_population.get(district_id, 0),

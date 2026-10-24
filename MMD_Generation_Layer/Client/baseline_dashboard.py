@@ -10,6 +10,7 @@ import pandas as pd
 import streamlit as st
 
 from MMD_Generation_Layer import config as project_config
+from MMD_Generation_Layer.Processor.output_artifacts import district_color_map
 from MMD_Generation_Layer.Processor.runtime_setup import load_dashboard_run_metadata
 from MMD_Generation_Layer.Processor.seat_allocation import (
     SEAT_ALLOCATION_LABEL,
@@ -89,7 +90,6 @@ def create_district_map(
     assignment: dict[str, int],
     plan_id: int,
     id_col: str,
-    num_districts: int,
     dissolve_districts: bool = True,
     show_precinct_lines: bool = True,
     district_edgecolor: str = "black",
@@ -98,7 +98,7 @@ def create_district_map(
     precinct_linewidth: float = 0.4,
     precinct_alpha: float = 0.25,
 ):
-    """Create district map figure for a selected plan."""
+    """Create a district map labelled with the assignment IDs used in district CSVs."""
     gdf_plot = gdf.copy()
     gdf_plot["district"] = gdf_plot[id_col].astype(str).map(assignment)
 
@@ -107,15 +107,14 @@ def create_district_map(
         st.warning(f"⚠️ {missing} precincts missing district assignment (ID mismatch).")
 
     gdf_plot = gdf_plot.dropna(subset=["district"])
+    district_shapes = gdf_plot.dissolve(by="district")
+    colors_by_district = district_color_map(assignment.values())
     fig, ax = plt.subplots(1, 1, figsize=(12, 10))
-    colors = ['Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn', 'BuGn_r', 'BuPu', 'BuPu_r', 'CMRmap', 'CMRmap_r', 'Dark2', 'Dark2_r', 'GnBu', 'GnBu_r', 'Grays', 'Grays_r', 'Greens', 'Greens_r', 'Greys', 'Greys_r', 'OrRd', 'OrRd_r', 'Oranges', 'Oranges_r', 'PRGn', 'PRGn_r', 'Paired', 'Paired_r', 'Pastel1', 'Pastel1_r', 'Pastel2', 'Pastel2_r', 'PiYG', 'PiYG_r', 'PuBu', 'PuBuGn', 'PuBuGn_r', 'PuBu_r', 'PuOr', 'PuOr_r', 'PuRd', 'PuRd_r', 'Purples', 'Purples_r', 'RdBu', 'RdBu_r', 'RdGy', 'RdGy_r', 'RdPu', 'RdPu_r', 'RdYlBu', 'RdYlBu_r', 'RdYlGn', 'RdYlGn_r', 'Reds', 'Reds_r', 'Set1', 'Set1_r', 'Set2', 'Set2_r', 'Set3', 'Set3_r', 'Spectral', 'Spectral_r', 'Wistia', 'Wistia_r', 'YlGn', 'YlGnBu', 'YlGnBu_r', 'YlGn_r', 'YlOrBr', 'YlOrBr_r', 'YlOrRd', 'YlOrRd_r', 'afmhot', 'afmhot_r', 'autumn', 'autumn_r', 'berlin', 'berlin_r', 'binary', 'binary_r', 'bone', 'bone_r', 'brg', 'brg_r', 'bwr', 'bwr_r', 'cividis', 'cividis_r', 'cool', 'cool_r', 'coolwarm', 'coolwarm_r', 'copper', 'copper_r', 'cubehelix', 'cubehelix_r', 'flag', 'flag_r', 'gist_earth', 'gist_earth_r', 'gist_gray', 'gist_gray_r', 'gist_grey', 'gist_grey_r', 'gist_heat', 'gist_heat_r', 'gist_ncar', 'gist_ncar_r', 'gist_rainbow', 'gist_rainbow_r', 'gist_stern', 'gist_stern_r', 'gist_yarg', 'gist_yarg_r', 'gist_yerg', 'gist_yerg_r', 'gnuplot', 'gnuplot2', 'gnuplot2_r', 'gnuplot_r', 'gray', 'gray_r', 'grey', 'grey_r', 'hot', 'hot_r', 'hsv', 'hsv_r', 'inferno', 'inferno_r', 'jet', 'jet_r', 'magma', 'magma_r', 'managua', 'managua_r', 'nipy_spectral', 'nipy_spectral_r', 'ocean', 'ocean_r', 'pink', 'pink_r', 'plasma', 'plasma_r', 'prism', 'prism_r', 'rainbow', 'rainbow_r', 'seismic', 'seismic_r', 'spring', 'spring_r', 'summer', 'summer_r', 'tab10', 'tab10_r', 'tab20', 'tab20_r', 'tab20b', 'tab20b_r', 'tab20c', 'tab20c_r', 'terrain', 'terrain_r', 'turbo', 'turbo_r', 'twilight', 'twilight_r', 'twilight_shifted', 'twilight_shifted_r', 'vanimo', 'vanimo_r', 'viridis', 'viridis_r', 'winter', 'winter_r']
-    cmap = plt.cm.get_cmap("tab20", num_districts)
 
     if dissolve_districts:
-        district_shapes = gdf_plot.dissolve(by="district")
         district_shapes.plot(
             ax=ax,
-            cmap=cmap,
+            color=[colors_by_district[district_id] for district_id in district_shapes.index],
             edgecolor=district_edgecolor,
             linewidth=district_linewidth,
         )
@@ -131,15 +130,13 @@ def create_district_map(
     else:
         gdf_plot.plot(
             ax=ax,
-            column="district",
-            cmap=cmap,
+            color=gdf_plot["district"].map(colors_by_district),
             edgecolor=(precinct_edgecolor if show_precinct_lines else "none"),
             linewidth=(precinct_linewidth if show_precinct_lines else 0),
             alpha=1.0,
         )
 
         if show_precinct_lines and district_linewidth > 0:
-            district_shapes = gdf_plot.dissolve(by="district")
             district_shapes.boundary.plot(
                 ax=ax,
                 color=district_edgecolor,
@@ -147,8 +144,23 @@ def create_district_map(
                 alpha=1.0,
             )
 
+    for district_id, geometry in district_shapes.geometry.items():
+        label_point = geometry.representative_point()
+        ax.text(
+            label_point.x,
+            label_point.y,
+            f"District {int(district_id)}",
+            ha="center",
+            va="center",
+            fontsize=11,
+            fontweight="bold",
+            color="black",
+            bbox={"boxstyle": "round,pad=0.3", "facecolor": "white", "edgecolor": "gray", "alpha": 0.9},
+            zorder=10,
+        )
+
     ax.set_title(
-        f"Plan {plan_id}: District Map ({num_districts} Districts)",
+        f"Plan {plan_id}: District Map ({len(district_shapes)} Districts)",
         fontsize=16,
         fontweight="bold",
         pad=20,
@@ -305,7 +317,6 @@ def main():
                 assignment,
                 int(plan_id),
                 dashboard_metadata.id_column,
-                dashboard_metadata.num_districts,
             )
             st.pyplot(fig_map)
             plt.close(fig_map)
