@@ -2,30 +2,47 @@
 
 This is the design reference for the Representational Layer entrypoint discussed during PR #30 and issue #5. It describes the intended workflow, including agreed behavior and small proposed refinements. It is not a claim that every step is already implemented. Update this document when a workflow decision changes so contributors can discuss the same stages and boundaries.
 
-The layer receives a researcher-authored JSON experiment, validates it, creates representational Python objects, generates individual ballots, and returns the candidates, ballots, and election metadata needed for simulation. It can also export that handoff as JSON. A future global orchestrator owns conversion to Simulation Layer models and starting the count.
+The layer receives a JSON configuration and prepares one election for simulation. It scores candidates using elector-unit profiles, generates capped rankings, and returns candidates, ranking counts, and election metadata. A future orchestration layer prepares inputs for multiple elections, calls the Representational Layer once per election, and coordinates simulation and collection of results.
+
+## Simplification Decisions
+
+1. **One district and one election per call.** Run the layer again with a different input to model another election. A future orchestrator owns experiment expansion and coordination across calls.
+2. **Retain the existing input infrastructure.** Use one district, election, preference model, and generation run in working configurations. The parser still reads the experiment-shaped input, and the entrypoint executes one run per call. This is an operating convention for current work.
+3. **Share one preference model across elector units.** Each unit supplies its own profile. The shared model supplies the active attributes, weights, missing-value policy, and temperature. Profiles drive differences in baseline utilities, and positive temperature allows variation among ballots within a unit.
+4. **Use one temperature-controlled ranking rule.** Sort `utility + temperature * gumbel_noise` and apply the rank cap. At zero temperature, skip random draws and sort the baseline utilities with a stable tie rule. Positive temperature uses independent Gumbel noise per candidate per ballot and produces the sequential softmax ranking distribution. `ranking_method` becomes redundant under this target policy.
+5. **Accumulate counts by ranking.** Add the entire unit size to one count at zero temperature. At positive temperature, sample a ranking and immediately increment its count. A sparse map of observed rankings avoids allocating slots for every possible ranking.
+6. **Define the provenance and counting tradeoffs.** Election-wide counts omit the source elector unit. Counts keyed by unit and ranking could preserve it at a higher memory cost. The Simulation Layer needs to consume multiplicities directly to retain the savings and apply STV transfer truncation at the per-ballot level.
 
 ## Master Workflow
 
-One invocation executes one `BallotGenerationRun` for one election. The input may describe an entire experiment with several districts, elections, preference models, and runs. Use the only run when there is exactly one; otherwise require an explicit run ID. Running all runs is a separate orchestration concern.
+The solid boundary encloses one Representational Layer invocation. A caller can supply a configuration directly today. The future orchestration layer can supply a series of single-election configurations and receive one result per call.
 
-Solid arrows describe work or outputs within the intended representational workflow. Dashed arrows describe downstream use outside this layer. Red nodes terminate the invocation with an error. A failed invocation does not return a success result or publish a new successful handoff.
+Solid arrows describe work or outputs for one invocation. Dashed arrows show future orchestration or integration. Amber nodes belong to future orchestration, and red nodes terminate the invocation with an error. A failed invocation does not return a success result or publish a new successful handoff.
+
+The blue, double-bordered scoring box represents a subprocess expanded in the separate [Scoring Detail diagram](#scoring-detail) below. Its internal loops and policies are maintained there.
 
 ```mermaid
 flowchart TD
+    subgraph FUTURE["Future orchestration layer: experiment planning"]
+        F_PLAN["Choose districts, elections and model scenarios<br/>Prepare a separate configuration for each run"]
+        F_CALL["Invoke the Representational Layer<br/>once per single-election configuration"]
+        F_PLAN -.-> F_CALL
+    end
+
+    subgraph REPRESENTATION["Representational Layer: one district, one election, one preference model per call"]
     subgraph INPUT["1. Receive and read configuration"]
-        I_START(["Researcher or external caller"])
-        I_REQUEST["Receive JSON path<br/>Optional run selector and export options<br/>No overrides of experiment settings"]
+        I_REQUEST["Receive a single-election JSON configuration<br/>Keep the existing experiment-shaped input contract<br/>Accept existing export options"]
         I_READ["Read file and decode JSON<br/>Reject malformed JSON and duplicate keys"]
         I_OK{"Readable JSON object?"}
         I_ERROR(["Raise input error with file context<br/>Stop before model creation"])
-        I_START --> I_REQUEST --> I_READ --> I_OK
+        I_REQUEST --> I_READ --> I_OK
         I_OK -- No --> I_ERROR
     end
 
     subgraph VALIDATE["2. Validate configuration and execution request"]
         V_SHAPE["Check model-derived field rules<br/>Required keys, types, supported options<br/>Collection sizes and numeric limits"]
         V_LINKS["Check IDs and relationships<br/>Resolve attribute names against config and library<br/>Check profile, weight, and custom-config rules"]
-        V_RUN["Check run selection and readiness<br/>Unambiguous run and linked election<br/>At least one active candidate and elector unit"]
+        V_RUN["Check the run and linked records<br/>At least one active candidate and elector unit<br/>Validate temperature for the ranking policy"]
         V_OK{"All validation rules pass?"}
         V_ERROR(["Raise validation error with field or run context<br/>Stop: no domain objects or output"])
         V_ACCEPT["Accept configuration without modifying it<br/>Validation creates no domain models"]
@@ -37,53 +54,40 @@ flowchart TD
 
     subgraph BUILD["3. Build representational state and bind the run"]
         B_RESOLVE["Resolve starter attribute definitions<br/>Apply documented defaults to new values<br/>Assign inherited experiment IDs"]
-        B_MODELS["Construct Experiment, Districts, Elections<br/>AttributeSpecs, Candidates, ElectorUnits<br/>PreferenceModels and BallotGenerationRuns"]
-        B_STATE["Collect the typed experiment state<br/>Index objects by ID and attribute name"]
-        B_BIND["Bind the selected run to its election,<br/>district, preference model and attribute specs<br/>Select active candidates and matching elector units"]
-        B_SETUP["Initialize one run-local RNG from random_seed<br/>Keep stable candidate and elector-unit order<br/>Read rank cap and prepare an empty ballot collection"]
-        V_ACCEPT --> B_RESOLVE --> B_MODELS --> B_STATE --> B_BIND --> B_SETUP
+        B_MODELS["Construct typed records using the existing model structure<br/>Resolve one district, election, preference model and run"]
+        B_BIND["Bind active candidates and elector units to the election<br/>Use one shared preference model for all units"]
+        B_SETUP["Read rank cap and prepare an empty ranking count map<br/>Keep stable candidate and elector-unit order<br/>Initialize a run-local RNG for positive temperature"]
+        V_ACCEPT --> B_RESOLVE --> B_MODELS --> B_BIND --> B_SETUP
     end
 
-    subgraph GENERATE["4. Generate ballots for each selected elector unit"]
+    subgraph GENERATE["4. Score each elector unit and accumulate ranking counts"]
         U_MORE{"Another elector unit?"}
-        U_NEXT["Take next ElectorUnit<br/>Read profile and size<br/>Start an empty unit ballot batch"]
-        S_SCORE["Score every active candidate once for this unit<br/>Compare each active attribute and apply missing policy<br/>Apply score style and weights; normalize final utility"]
+        U_NEXT["Take next ElectorUnit<br/>Read its profile and size<br/>Use the shared preference model"]
+        S_SCORE[["Attribute scoring and candidate utility<br/>Compare, calibrate, weight and aggregate<br/>See the separate Scoring Detail diagram below"]]
         S_OK{"Scoring succeeded<br/>with finite scores?"}
         S_ERROR(["Raise scoring error with unit,<br/>candidate and attribute context<br/>Stop before export"])
-        G_METHOD{"PreferenceModel.ranking_method"}
-
-        D_SORT["deterministic_sort<br/>Sort candidates by descending utility<br/>Preserve input order for equal scores"]
-        D_TEMPLATE["Create capped immutable rank groups<br/>Keep at most max_rankings_allowed candidates<br/>One candidate per successive rank"]
-        D_BATCH["Create exactly unit.size immutable Ballots<br/>Unique ballot IDs and source/run provenance<br/>All ballots have identical rankings"]
-
-        W_WEIGHTS["weighted_without_replacement<br/>Convert utilities to nonnegative sampling weights<br/>Use the documented score-to-weight policy"]
-        T_WEIGHTS["softmax_without_replacement<br/>Convert utilities using positive temperature<br/>Use numerically stable exponential weights"]
-        P_MORE{"Created unit.size ballots?"}
-        P_RESET["Start one ballot's ranking<br/>Reset available candidates and rank counter"]
-        P_DRAW["Draw one available candidate using the run RNG<br/>Append an immutable RankGroup<br/>Remove candidate from this ballot's pool"]
-        P_LIMIT{"Rank cap reached<br/>or candidate pool empty?"}
-        P_BALLOT["Construct one immutable Ballot from capped ranks<br/>Assign unique ID, generation_run_id<br/>and source_elector_unit_id"]
-
-        U_COLLECT["Collect the completed unit batch<br/>Exactly one Ballot per represented individual<br/>Append to the election ballot collection"]
+        G_TEMPERATURE{"Temperature equals zero?"}
+        G_BASE["Use baseline utilities directly<br/>One ranking represents the whole unit"]
+        G_NOISE["Draw independent Gumbel noise per candidate<br/>For this draw, use utility + temperature * noise"]
+        G_SORT["Sort scores in descending order<br/>Keep input order for exact ties<br/>Apply the rank cap and form a rank-group key"]
+        G_ADD["Increment this ranking's election-wide count<br/>Add unit.size at zero temperature<br/>Add 1 for a positive-temperature draw"]
+        G_MORE{"More draws needed for this unit?"}
 
         B_SETUP --> U_MORE
         U_MORE -- Yes --> U_NEXT --> S_SCORE --> S_OK
         S_OK -- No --> S_ERROR
-        S_OK -- Yes --> G_METHOD
-        G_METHOD -- Deterministic --> D_SORT --> D_TEMPLATE --> D_BATCH --> U_COLLECT
-        G_METHOD -- Weighted --> W_WEIGHTS --> P_MORE
-        G_METHOD -- Softmax --> T_WEIGHTS --> P_MORE
-        P_MORE -- No --> P_RESET --> P_DRAW --> P_LIMIT
-        P_LIMIT -- No --> P_DRAW
-        P_LIMIT -- Yes --> P_BALLOT --> P_MORE
-        P_MORE -- Yes --> U_COLLECT
-        U_COLLECT --> U_MORE
+        S_OK -- Yes --> G_TEMPERATURE
+        G_TEMPERATURE -- Yes --> G_BASE --> G_SORT
+        G_TEMPERATURE -- Positive temperature --> G_NOISE --> G_SORT
+        G_SORT --> G_ADD --> G_MORE
+        G_MORE -- Yes --> G_NOISE
+        G_MORE -- No --> U_MORE
     end
 
     subgraph OUTPUT["5. Prepare and return the simulation-ready handoff"]
-        O_VERIFY["Check generated batch invariants<br/>Ballot count equals sum of selected unit sizes<br/>Unique IDs, valid candidate references, ranks within cap"]
+        O_VERIFY["Check ranking counts and references<br/>Positive integer counts sum to all unit sizes<br/>Distinct ranking keys and ranks within cap"]
         O_METADATA["Derive election metadata from linked models<br/>election_id, seat_count, mode, max_ranks_allowed<br/>Create a stable elimination tie_break_order"]
-        O_PROJECT["Project only simulation-required candidate and ballot fields<br/>Preserve rank and candidate_ids groups<br/>Keep research profiles and scoring state out of the payload"]
+        O_PROJECT["Project candidates, ranking counts and metadata<br/>Preserve rank and candidate_ids groups<br/>Include a count for each distinct ranking"]
         O_OK{"Complete, valid handoff?"}
         O_ERROR(["Raise generation or handoff error<br/>Stop before publishing output"])
         O_EXPORT{"JSON export requested?"}
@@ -91,8 +95,8 @@ flowchart TD
         O_WRITE["Serialize through the single shared JSON writer<br/>Preserve stable field and array order"]
         O_WRITTEN{"Write succeeded?"}
         O_IO_ERROR(["Raise output error with destination context<br/>Do not return a successful export result"])
-        O_FILE[("Simulation-ready JSON artifact<br/>metadata + candidates + ballots")]
-        O_RETURN(["Return representational result<br/>Candidates + immutable Ballots + election metadata<br/>Selected run ID + optional successful output path"])
+        O_FILE[("Target count-aware JSON handoff<br/>Metadata, candidates and ranked ballot counts")]
+        O_RETURN(["Return one election result<br/>Candidates, ranking counts and election metadata<br/>Run ID and optional output path"])
 
         U_MORE -- No --> O_VERIFY --> O_METADATA --> O_PROJECT --> O_OK
         O_OK -- No --> O_ERROR
@@ -102,106 +106,140 @@ flowchart TD
         O_WRITTEN -- No --> O_IO_ERROR
         O_WRITTEN -- Yes --> O_FILE --> O_RETURN
     end
+    end
 
-    subgraph DOWNSTREAM["Outside the Representational Layer"]
-        X_ORCHESTRATOR["Future global orchestrator<br/>Receives the representational result"]
-        X_ADAPTER["Shared boundary adapter<br/>Maps representational objects and metadata<br/>to Simulation Layer models"]
-        X_READER["Existing simulation JSON loader<br/>Reads the file handoff"]
-        X_MODELS["Simulation Candidate, Ranking, Ballot and Election<br/>Validate simulation model invariants"]
-        X_COUNT["Simulation Layer runs RCV or STV<br/>Produces winners and round results"]
-        O_RETURN -. In-memory integration .-> X_ORCHESTRATOR
-        X_ORCHESTRATOR -.-> X_ADAPTER
+    I_START(["Researcher supplies one configuration"]) --> I_REQUEST
+    F_CALL -. One call per configuration .-> I_REQUEST
+
+    subgraph DOWNSTREAM["Future count-aware simulation handoff"]
+        X_ADAPTER["Orchestration adapter maps one result<br/>to Simulation Layer models with counts"]
+        X_READER["Shared JSON loader reads rankings and counts"]
+        X_MODELS["Validate one simulation election<br/>Keep counts on grouped rankings"]
+        X_COUNT["Run RCV or STV using multiplicities<br/>Preserve per-ballot STV transfer truncation"]
+        O_RETURN -. In-memory integration .-> X_ADAPTER
         X_ADAPTER -.-> X_MODELS
         O_FILE -. File-based integration .-> X_READER
         X_READER -.-> X_MODELS
         X_MODELS -. Invoked by an external caller .-> X_COUNT
     end
+    F_RESULTS["Future orchestration layer<br/>Collect and compare results across invocations"]
+    X_COUNT -. One simulation result .-> F_RESULTS
 
     classDef failure fill:#fff0f0,stroke:#b42318,color:#7a1711;
     classDef artifact fill:#edf8f1,stroke:#27764b,color:#17482e;
     classDef external fill:#f3f4f6,stroke:#6b7280,color:#20242b;
+    classDef detailed fill:#e0f2fe,stroke:#0369a1,stroke-width:3px,color:#0c4a6e;
+    classDef orchestration fill:#fff4db,stroke:#9a6700,stroke-dasharray:5 3,color:#573900;
     class I_ERROR,V_ERROR,S_ERROR,O_ERROR,O_IO_ERROR failure;
-    class B_STATE,O_FILE,O_RETURN artifact;
-    class X_ORCHESTRATOR,X_ADAPTER,X_READER,X_MODELS,X_COUNT external;
+    class O_FILE,O_RETURN artifact;
+    class X_ADAPTER,X_READER,X_MODELS,X_COUNT external;
+    class S_SCORE detailed;
+    class F_PLAN,F_CALL,F_RESULTS orchestration;
+    style FUTURE fill:#fffbef,stroke:#9a6700,stroke-dasharray:5 3
+    style REPRESENTATION fill:#f8fafc,stroke:#475569,stroke-width:2px
 ```
 
 The validation diamond summarizes the phase's outcome; an implementation should raise as soon as a validation rule fails. There is no need to finish later checks after an error. The same applies to scoring, generation invariants, and output validation.
 
 ## Scoring Detail
 
-This expands node `S_SCORE`. Run this subflow once per elector unit, before selecting a generation method. Candidate scores are intermediate representational state; they are not simulation inputs.
+This expands the blue `S_SCORE` subprocess box in Step 4 of the master diagram. Matching blue entry and exit nodes mark the detailed subflow's boundaries. Attribute scoring and utility construction are a central research and engineering feature of the layer. Run this subflow once per elector unit using the shared preference model, then pass the candidate utilities to the ranking policy.
+
+The engineering task is to define how profile information becomes a meaningful contribution to preference, then how those contributions jointly describe preference for a candidate. A shared numeric range alone does not make different attributes equally meaningful. The model needs explicit definitions for score direction, neutral values, distance or effect scales, missing data, relative importance, and aggregation. The diagram names these responsibilities without treating the current formulas as a finished behavioral model.
 
 ```mermaid
 flowchart TD
     S_START(["Selected elector unit + active candidates<br/>Resolved attribute specs + PreferenceModel"])
     S_CANDIDATE["Take next candidate<br/>Reset weighted score and weight denominator"]
-    S_ATTRIBUTE["Take next active attribute<br/>Read specification, weight and required profile values"]
-    S_COMPARE["Apply the configured comparison policy<br/>similarity, exact_match, set_overlap,<br/>candidate_effect or custom"]
+    S_ATTRIBUTE["Take next active attribute<br/>Resolve its rule, units, bounds and parameters<br/>Read weight and required profile values"]
+    S_COMPARE["Evaluate the attribute-specific comparison<br/>Translate the profile values into a raw contribution<br/>using the declared scoring policy"]
     S_AVAILABLE{"Comparable values and score available?"}
     S_MISSING{"missing_value_policy"}
     S_SKIP["Ignore this attribute for this candidate<br/>Exclude it from the weight denominator"]
     S_ZERO["Use neutral score 0<br/>Include its weight in the denominator"]
     S_FAIL(["Raise error with attribute, candidate<br/>and elector-unit context"])
+    S_SCALE["Interpret the rule output on a common signed scale<br/>Make the neutral point and magnitude meaningful<br/>Check declared calibration and score bounds"]
     S_STYLE["Apply signed, bonus_only or penalty_only style<br/>Clamp attribute score to the supported range"]
     S_WEIGHT["Record attribute score<br/>Add weight times score to weighted total<br/>Add absolute weight to denominator"]
+    S_TRACE["Retain an inspectable contribution record<br/>Input values, rule, raw and styled scores,<br/>weight and resulting contribution"]
     S_ATTR_MORE{"More active attributes?"}
-    S_FINAL["Normalize weighted total by weight denominator<br/>Use neutral utility 0 when denominator is zero<br/>Store finite final_score for this candidate"]
+    S_FINAL["Aggregate this candidate's included contributions<br/>Baseline: weighted total divided by absolute-weight sum<br/>Use neutral utility 0 when denominator is zero"]
+    S_AUDIT["Store finite final_score with its decomposition<br/>Expose which contributions increased or decreased utility<br/>and which attributes were omitted"]
     S_CAND_MORE{"More active candidates?"}
-    S_RESULT(["CandidateScores for this elector unit<br/>Per-attribute diagnostics + one final utility per candidate<br/>Continue to ranking-method selection"])
+    S_RESULT(["CandidateScores for this elector unit<br/>Per-attribute diagnostics + one final utility per candidate<br/>Continue to temperature-controlled ranking"])
 
     S_START --> S_CANDIDATE --> S_ATTRIBUTE --> S_COMPARE --> S_AVAILABLE
-    S_AVAILABLE -- Yes --> S_STYLE --> S_WEIGHT --> S_ATTR_MORE
+    S_AVAILABLE -- Yes --> S_SCALE --> S_STYLE --> S_WEIGHT --> S_TRACE --> S_ATTR_MORE
     S_AVAILABLE -- No --> S_MISSING
     S_MISSING -- ignore --> S_SKIP --> S_ATTR_MORE
     S_MISSING -- zero --> S_ZERO --> S_WEIGHT
     S_MISSING -- error --> S_FAIL
     S_ATTR_MORE -- Yes --> S_ATTRIBUTE
-    S_ATTR_MORE -- No --> S_FINAL --> S_CAND_MORE
+    S_ATTR_MORE -- No --> S_FINAL --> S_AUDIT --> S_CAND_MORE
     S_CAND_MORE -- Yes --> S_CANDIDATE
     S_CAND_MORE -- No --> S_RESULT
 
     classDef failure fill:#fff0f0,stroke:#b42318,color:#7a1711;
+    classDef detailed fill:#e0f2fe,stroke:#0369a1,stroke-width:3px,color:#0c4a6e;
     class S_FAIL failure;
+    class S_START,S_RESULT detailed;
 ```
 
 `candidate_effect` needs the candidate's value only. Other comparison modes generally need both candidate and elector values. An absent individual attribute value is handled by `missing_value_policy`; an entirely empty required profile is rejected during configuration validation. Malformed or unsupported values should produce a contextual validation/scoring error, not an undocumented fallback score.
 
+### Scoring Responsibilities and Open Design Work
+
+| Responsibility | What must be engineered and evaluated |
+| --- | --- |
+| Attribute meaning and comparison | Define required inputs, units, comparison behavior and rule parameters for each attribute. Identify what makes a comparison favorable, neutral, unfavorable or undefined. An attribute's storage type alone is insufficient to determine its preference semantics. |
+| Score calibration | Define the contribution scale and the meaning of its magnitude. Check whether contributions from different attributes are comparable before applying preference weights. Clamping to a common range limits values but does not establish that comparability. |
+| Missing information | Preserve the distinction between missing, ignored, and genuinely neutral comparisons. Make the resulting change to the aggregation denominator visible. |
+| Preference weights | Define what a weight expresses after score calibration. Keep score-scale choices separate from importance weights so changing units or bounds does not silently change the research interpretation. |
+| Utility aggregation | The current normalized weighted sum is an explicit baseline. It assumes additive contributions and allows a favorable attribute to compensate for an unfavorable one. Attribute interactions, thresholds, or non-compensatory rules require a research decision and implementation; they are not supported merely by changing weights. |
+| Explainability | Retain enough information to reconstruct a candidate's utility from its inputs, scoring rules, contributions, weights, and missing-data decisions. The richer trace shown here is intended behavior; the current scorer returns attribute scores and a final score. |
+| Model evaluation | Check known comparison examples, boundary cases, and missing-value behavior. Evaluate sensitivity to scales and weights, and compare predicted preferences with suitable research evidence when available. Passing arithmetic tests does not establish behavioral validity. |
+
+For the baseline aggregator, utility is `sum(weight * attribute_score) / sum(abs(weight))` over included attributes. An ignored attribute is excluded from both sums; a neutral zero score still contributes its absolute weight to the denominator. A zero denominator yields neutral utility. These are explicit model assumptions to review, not incidental implementation details.
+
+Rule selection, calibration, and aggregation must use declared policies, rather than new undocumented defaults in the entrypoint. The stages in the diagram describe responsibilities; they do not require a separate class or file for every box. Existing comparison helpers already perform some normalization, so implementing this design must avoid applying the same transformation twice.
+
 ## Validation and Model Creation
 
-The target validator checks the raw configuration without mutating it or creating domain objects. Success returns normally; failure raises an error. The builder runs only after acceptance and owns default application, starter-attribute expansion, inherited IDs, and dataclass construction. Both stages should share model-derived field definitions and supported-option definitions so their rules do not drift.
+Keep the existing JSON input structure, model classes, and parser for single-election work. Today the parser validates the full contract and constructs model objects, and the entrypoint executes one generation run. The diagram separates validation from model construction conceptually. A dedicated validation stage remains a possible refinement independent of the single-election convention.
 
 | Input area | Required validation and intended construction |
 | --- | --- |
 | Experiment | Exactly one. User supplies its ID; description is optional. This ID is inherited by linked models that require `experiment_id`. |
-| Districts and elections | At least one district; exactly one election per district. Check unique IDs and valid links, positive population and seat target, supported election mode, and a positive rank cap at least as large as the district seat target. Geometry remains optional and unused by ballot generation. |
+| Districts and elections | Supply one district and its election in the existing collections. Check IDs and links, positive population and seat target, supported election mode, and a positive rank cap at least as large as the district seat target. Geometry remains optional. |
 | Attribute specs | Zero or more explicit specs. An existing starter name can supply the definition; referenced starter attributes are resolved even when not explicitly listed. New attributes require an ID, name, supported type, comparison mode, and score style. Custom comparison requires non-empty configuration for the supported custom policy. Non-custom `config` is ignored under the agreed input policy. |
 | Candidates | At least one overall and at least one non-withdrawn candidate for the selected election. Validate IDs, election references, optional home district, and non-empty profiles. Withdrawn candidates do not participate in scoring or generated rankings under the current entrypoint policy. |
 | Elector units | At least one overall and at least one for the selected election. Each has a unique ID, valid election reference, positive integer size, and non-empty profile. Only units belonging to the selected election contribute ballots. |
-| Preference models | At least one. Require ID, name, non-empty active attributes and exactly matching weight keys, resolved attribute names, finite numeric weights and mandatory finite temperature. Apply documented defaults for omitted missing-value and ranking policies. Require positive temperature when using softmax. `parameters` defaults to an empty mapping and is ignored for now. |
-| Generation runs | At least one. Validate unique run IDs, election and preference-model references, and optional seed. Run selection must resolve exactly one run; the selector chooses existing data and does not override it. |
-| Generated classes | Researchers do not supply `RankGroup` or `Ballot` records. Generation creates them as immutable objects with tuple-backed nested contents. |
+| Preference models | Supply one shared model with ID, name, non-empty active attributes, exactly matching weight keys, resolved attribute names, and finite numeric weights. The target ranking policy accepts finite `temperature >= 0`. Today's schema still requires positive temperature and accepts `ranking_method`. Apply documented missing-value defaults. |
+| Generation runs | Supply one run linking the election and preference model, with an optional seed. The entrypoint can execute that run directly. |
+| Generated rankings | The generator constructs capped rank-group keys and integer counts. These records are outputs derived from elector units. |
 
 The validator may look up library definitions and raw records to check references; that lookup is not model construction. The builder copies resolved definitions into experiment-owned objects and preserves the supplied values unless a documented default or inherited value applies.
 
 Do not silently invent additional research constraints. In particular, equality between district population and summed elector-unit sizes, or a requirement that candidates outnumber seats, needs an explicit project policy before becoming a rejection rule. The ballot count is determined by the sizes of the selected elector units.
 
-## Generation Policies
+## Ranking and Aggregation
 
-| Method | Per-unit preparation | Ballot construction |
+Compute baseline candidate utilities once per elector unit. Use one ranking rule with `temperature` as its only control. Validate that temperature is finite and nonnegative. Both cases use a stable descending sort, preserve input order for exact ties, and retain candidates up to the rank cap as successive rank groups.
+
+| Temperature | Scores passed to the sort | Update to the ranking count |
 | --- | --- | --- |
-| `deterministic_sort` | Score once; sort by descending final utility. Equal scores preserve input candidate order under the current policy. | Create one capped immutable ranking template and exactly `unit.size` distinct Ballots with unique IDs. They may safely share the immutable template. |
-| `weighted_without_replacement` | Score once; convert utilities into sampling weights using a documented common rule. The current baseline is `offset = abs(min_score) + 1`, then `weight = score + offset`. | For each individual, reset the candidate pool, draw and remove one candidate per rank, and stop at the cap or pool exhaustion before constructing the Ballot. |
-| `softmax_without_replacement` | Score once; require positive temperature. The target stable calculation is `weight = exp((score - max_score) / temperature)`, which preserves softmax probabilities while avoiding positive-exponent overflow. | Use the same per-individual sampling loop as the weighted method. A candidate cannot appear twice on one generated ballot. |
+| Zero | Baseline utilities. Sort once for the entire unit and skip RNG draws. | Add `unit.size` to the resulting ranking. |
+| Positive | For each represented voter, draw an independent standard Gumbel value `g` per candidate and sort `utility + temperature * g`. | Add `1` immediately after each draw. Repeat for `unit.size` draws. |
 
-All branches use the same rank cap, ID/provenance rules, and immutable models. These methods generate consecutive ranks with one candidate per rank; equal candidate utilities do not automatically create tied rank groups. Rank-group representation is still preserved for later tie and skipped-rank support.
+Keep the baseline utilities for scoring diagnostics. For positive temperature, Gumbel perturbation and sorting produce the same ranking distribution as sequential softmax sampling without replacement. The run-local RNG continues across elector units and ballots. A fixed seed and stable iteration order reproduce results for the same implementation. [Gumbel-top-k result](https://proceedings.mlr.press/v97/kool19a.html)
 
-The RNG belongs to the selected run and is reused across its elector units and individual ballots. Keep iteration order stable. A fixed seed, ordered input, and unchanged generation policies should reproduce stochastic output; an omitted seed does not promise reproducibility. Deterministic generation does not consume random choices.
+Key counts by the complete capped rank-group sequence, including each rank and its candidate IDs. A dense index is possible when the ranking space is small. Four candidates ranked three deep yield `4 * 3 * 2 = 24` possible generated rankings. A sparse map grows with the number of observed rankings and avoids allocating space for unused possibilities. The sum of the counts must equal the sum of elector-unit sizes. Positive temperature still requires a draw per represented voter under this design.
 
-The returned ballot count must equal the sum of selected elector-unit sizes. Candidates are scored once per unit, not once per individual ballot. Ballots are constructed within the rank limit; no later mutation or replacement is needed to repair an overlong ballot.
+Election-wide counts combine contributions from different elector units. This discards the source unit for each contribution. A map keyed by `(elector_unit_id, ranking)` would preserve that information and could contain more entries. The main workflow uses election-wide counts.
 
 ## Output and Boundary Mapping
 
-The result returned to a caller should contain the selected representational candidates and ballots, complete election metadata, selected generation-run ID, and an optional successfully written output path. Including metadata is necessary for a future orchestrator to build a simulation election without rereading the source configuration. This is a proposed extension to the current result type, not a separate duplicate domain model.
+The target result contains one election's candidates, ranking counts, election metadata, generation-run ID, and an optional successfully written output path. Metadata lets an orchestrator construct a simulation election from the result directly. A future orchestrator can prepare and submit separate configurations, pass each result to simulation, and compare outcomes across calls.
 
 File export should use the shared JSON writer and the same explicit boundary mapping that future integration will use. The JSON projection removes research-only fields; it does not instantiate Simulation Layer classes inside the Representational Layer.
 
@@ -214,10 +252,10 @@ File export should use the shared JSON writer and the same explicit boundary map
 | Election rank cap | `metadata.max_ranks_allowed` | Simulation `Election.max_ranks_allowed` |
 | Documented elimination priority | `metadata.tie_break_order` | Simulation tie resolution; earlier IDs are eliminated first when tied. |
 | Selected Candidate | `candidates[].candidate_id`, `withdrawn` | Simulation `Candidate` |
-| Generated Ballot | `ballots[].ballot_id`, `rankings` | Simulation `Ballot` |
+| Grouped ranking | `ballots[].ballot_id`, `rankings`, proposed `count` | One simulation ballot record per distinct ranking, with a positive integer multiplicity. A missing `count` can default to `1` for existing files. |
 | Immutable RankGroup | `rankings[].rank`, `candidate_ids` | Simulation `Ranking`; tuples become JSON arrays. |
 
-Candidate profiles, elector profiles, attributes, utilities, preference parameters, geometry, and representational ballot provenance stay outside the minimal simulation candidate/ballot records. They can remain available in representational state for research and diagnostics. The counting engine must not depend on their meaning.
+Candidate profiles, elector profiles, attributes, utilities, preference parameters, and geometry remain representational data. The count-aware handoff requires Simulation Layer support to tally grouped rankings directly. For STV, retain a transfer value per represented ballot, apply the existing four-decimal truncation to that value, and multiply the resulting value by the group count when tallying. A group can share one transfer value and activity state while its members have identical ranking and transfer histories. Verify round totals and winners against the equivalent individual ballots before adopting grouped counting.
 
 Keep ballot-rank tie handling separate from simulation elimination tie-breaking. The current export baseline uses sorted active candidate IDs as the elimination priority. That policy is explicit and reproducible, but changing it or making it configurable requires a coordinated contract decision; it should never be inferred from a candidate's preference score.
 
@@ -227,17 +265,17 @@ For reproducible JSON, preserve defined field order, candidate and ballot order,
 
 | Responsibility | Intended owner | Relationship to current work |
 | --- | --- | --- |
-| Read JSON, validate fields and links, resolve model shape | Input-contract utilities | Already present, but validation currently constructs models. Separate validation from building as a follow-up. |
-| Construct experiment objects and apply declared defaults | Representational state builder | Currently performed inside the parser. A distinct function can provide this boundary without adding unnecessary packages. |
-| Bind one run and coordinate the layer | `Representational_Layer/main.py` | PR #30 adds this entrypoint. It should call the stages and avoid repeating contract rules. |
+| Read JSON, validate fields and links, and build model objects | Existing input-contract utilities | Retain the current parser and experiment-shaped contract. Use single-election inputs as a working convention. |
+| Execute one election with one shared preference model | `Representational_Layer/main.py` | The existing entrypoint executes one run and uses that run's preference model for every elector unit. |
 | Reject missing selected-election data | Validation/execution preflight | Added in the current entrypoint; the target flow moves these checks before domain model construction. |
-| Compare profiles and score candidates | Existing scoring utilities | Reuse these policies. Contextual failures and finite-score checks are part of the target contract. |
-| Create immutable, capped ballots | Existing generation utilities | Implemented during this review. Capping occurs before Ballot construction for all generation methods. |
-| Stable, positive-temperature softmax | Generation policy and validator | Target refinement; current code still substitutes a temperature for nonpositive values and uses unstabilized exponentials. |
+| Compare attributes, calibrate contributions, and construct candidate utility | Existing scoring utilities and declared scoring specifications | Central feature to develop and evaluate. Existing comparison policies and a normalized weighted sum provide the baseline; explicit calibration, richer contribution traces, contextual failures and finite-score checks are target refinements. |
+| Rank with temperature and Gumbel noise | Generation utilities and validator | Target policy. Current generation still uses separate deterministic, shifted-weight, and sequential softmax methods. |
+| Aggregate identical capped rankings | Representational generation | Target optimization. The current generator returns one `Ballot` per represented voter. |
+| Tally ranking counts and apply per-ballot STV truncation | Simulation Layer and shared JSON contract | Future count-aware handoff. The current loader and counter use individual ballot records. |
 | Project a minimal simulation payload and export | Shared boundary/JSON utilities | Current writer serializes complete representational dataclasses. Explicit projection and one public writing path are follow-up refinements. |
 | Return metadata and support execution without file export | Existing workflow result and entrypoint | Target refinement; the current entrypoint always exports and returns candidates, ballots, and a path. |
 | Validate and atomically publish the final handoff | Shared boundary/JSON utilities | Proposed hardening, not a claim about the current writer. |
-| Convert to simulation classes and start counting | Future global orchestrator with a shared adapter | Outside PR #30's representational entrypoint responsibility. Existing file-based simulation loading remains usable. |
+| Coordinate multiple elections and collect simulation results | Future orchestration layer with a shared adapter | Prepare one configuration per election, invoke representation and simulation for each, and collect the results. |
 
 ## Maintaining This Reference
 
